@@ -14,8 +14,6 @@ export function App() {
 
   useEffect(() => {
     const gap = 48;
-    const itemsPerPage = Math.floor((screen.height - gap * 2) / (64 + gap));
-    const itemsPerRow = Math.floor((screen.width - gap) / (64 + gap));
 
     const loadApps = async () => {
       const switchApps = Array.from(Switch.Application).filter(
