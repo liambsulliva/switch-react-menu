@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Image, Text } from "react-tela";
-
-interface AppData {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  app: Switch.Application;
-}
+import { Text } from "react-tela";
+import { AppIcon } from "./components/AppIcon";
+import { AppData } from "./types/AppData";
 
 function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
@@ -16,10 +10,14 @@ function truncate(str: string, maxLength: number): string {
 
 export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const gap = 48;
+
+  const calculateItemsPerPage = (firstItemWidth: number) => {
+    return Math.floor((screen.width - gap) / (firstItemWidth + gap));
+  };
 
   useEffect(() => {
-    const gap = 48;
-
     const loadApps = async () => {
       const switchApps = Array.from(Switch.Application).filter(
         (app) => app.icon
@@ -27,7 +25,7 @@ export function App() {
       const displayedApps: AppData[] = [];
 
       let x = gap;
-      let y = gap;
+      const y = gap;
 
       for (const app of switchApps) {
         let img;
@@ -35,11 +33,6 @@ export function App() {
           img = await createImageBitmap(new Blob([app.icon]));
         }
         if (!img) continue;
-
-        if (x + img.width >= screen.width) {
-          x = gap;
-          y += img.height + 40 + gap;
-        }
 
         displayedApps.push({
           x,
@@ -58,31 +51,62 @@ export function App() {
     loadApps();
   }, []);
 
+  const itemsPerPage =
+    apps.length > 0 ? calculateItemsPerPage(apps[0].width) : 0;
+  const totalPages = Math.ceil(apps.length / itemsPerPage);
+  const paginatedApps = apps.slice(
+    currentPage * itemsPerPage,
+    (currentPage + 1) * itemsPerPage
+  );
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
+  };
+
+  const visibleApps = paginatedApps.map((app, index) => ({
+    ...app,
+    x: gap + index * (app.width + gap),
+  }));
+
   return (
     <>
-      {apps.map((displayedApps, index) => (
-        <React.Fragment key={index}>
-          {displayedApps.app.icon && (
-            <Image
-              src={URL.createObjectURL(new Blob([displayedApps.app.icon]))}
-              x={displayedApps.x}
-              y={displayedApps.y}
-              width={displayedApps.width}
-              height={displayedApps.height}
-              onTouchStart={() => displayedApps.app.launch()}
-            />
-          )}
-          <Text
-            x={displayedApps.x + displayedApps.width / 2}
-            y={displayedApps.y + displayedApps.height + 20}
-            fill="white"
-            fontSize={24}
-            textAlign="center"
-          >
-            {truncate(displayedApps.app.name, 17)}
-          </Text>
-        </React.Fragment>
+      {visibleApps.map((displayedApp, index) => (
+        <AppIcon key={index} displayedApp={displayedApp} truncate={truncate} />
       ))}
+      <Text
+        x={50}
+        y={screen.height - 50}
+        fill="white"
+        fontSize={24}
+        onTouchStart={handlePrevPage}
+      >
+        {"< Prev"}
+      </Text>
+
+      <Text
+        x={screen.width - 50}
+        y={screen.height - 50}
+        fill="white"
+        fontSize={24}
+        textAlign="right"
+        onTouchStart={handleNextPage}
+      >
+        {"Next >"}
+      </Text>
+
+      <Text
+        x={screen.width / 2}
+        y={screen.height - 50}
+        fill="white"
+        fontSize={24}
+        textAlign="center"
+      >
+        {`${currentPage + 1}/${totalPages}`}
+      </Text>
     </>
   );
 }
