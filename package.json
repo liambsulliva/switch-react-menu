@@ -1,5 +1,9 @@
 {
   "name": "react-menu",
+  "nacp": {
+    "title": "React Menu",
+    "id": "0100d046e70f0000"
+  },
   "version": "0.0.1",
   "private": true,
   "description": "A redesigned switch home menu, built in React.",
@@ -23,8 +27,5 @@
   "author": {
     "name": "Liam Sullivan",
     "email": "75332524+liambsulliva@users.noreply.github.com"
-  },
-  "nacp": {
-    "id": "0100d046e70f0000"
   }
 }
