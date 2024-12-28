@@ -2,11 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Text } from "react-tela";
 import { AppIcon } from "./components/AppIcon";
 import { AppData } from "./types/AppData";
-
-function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + "...";
-}
+import { truncate } from "./lib/truncate";
 
 export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
