@@ -9,6 +9,11 @@ interface AppData {
   app: Switch.Application;
 }
 
+function truncate(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + "...";
+}
+
 export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
 
@@ -74,7 +79,7 @@ export function App() {
             fontSize={24}
             textAlign="center"
           >
-            {displayedApps.app.name}
+            {truncate(displayedApps.app.name, 17)}
           </Text>
         </React.Fragment>
       ))}
