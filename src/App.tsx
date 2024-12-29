@@ -3,10 +3,15 @@ import { Text } from "react-tela";
 import { AppIcon } from "./components/AppIcon";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
+import { Button } from "@nx.js/constants";
 
 export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
+  const [shouldersPressed, setShouldersPressed] = useState({
+    L: false,
+    R: false,
+  });
   const gap = 48;
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
@@ -67,6 +72,33 @@ export function App() {
     ...app,
     x: gap + index * (app.width + gap),
   }));
+
+  useEffect(() => {
+    const handleGamepadInput = () => {
+      const gamepad = navigator.getGamepads()[0];
+      if (!gamepad) return;
+
+      if (gamepad.buttons[Button.L].pressed && !shouldersPressed.L) {
+        setShouldersPressed((prev) => ({ ...prev, L: true }));
+        handlePrevPage();
+      } else if (!gamepad.buttons[Button.L].pressed && shouldersPressed.L) {
+        setShouldersPressed((prev) => ({ ...prev, L: false }));
+      }
+
+      if (gamepad.buttons[Button.R].pressed && !shouldersPressed.R) {
+        setShouldersPressed((prev) => ({ ...prev, R: true }));
+        handleNextPage();
+      } else if (!gamepad.buttons[Button.R].pressed && shouldersPressed.R) {
+        setShouldersPressed((prev) => ({ ...prev, R: false }));
+      }
+    };
+
+    const gamepadInterval = setInterval(handleGamepadInput, 16); // ~60fps
+
+    return () => {
+      clearInterval(gamepadInterval);
+    };
+  }, [shouldersPressed, totalPages]);
 
   return (
     <>
