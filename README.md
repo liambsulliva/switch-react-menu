@@ -1,6 +1,6 @@
 # Switch React Menu
 
-A minimalist home menu for the Nintendo Switch, built with React. This project demonstrates how to create a custom home menu interface using React and react-tela, rendering React components directly to a canvas instead of the DOM.
+A minimalist home menu for the Nintendo Switch, built with React. This project relies on react-tela, which allows React components to be mounted to a `<canvas>` element instead of a DOM. This allows the nx.js runtime to natively render the components to the screen.
 
 ## Features
 
@@ -15,10 +15,10 @@ A minimalist home menu for the Nintendo Switch, built with React. This project d
 ## Technical Stack
 
 - React 18
-- react-tela (React canvas renderer)
-- esbuild (for bundling)
-- nx.js (Nintendo Switch JavaScript runtime)
 - TypeScript
+- nx.js (Nintendo Switch JavaScript runtime)
+- react-tela (canvas rendering library)
+- esbuild
 
 ## Controls
 
@@ -35,7 +35,6 @@ A minimalist home menu for the Nintendo Switch, built with React. This project d
   - `/hooks` - Custom React hooks for gamepad navigation
   - `/lib` - Utility functions
   - `/types` - TypeScript type definitions
-- `/romfs` - Runtime files (fonts, bundled JavaScript)
 
 ## Building From Source
 
@@ -45,7 +44,7 @@ A minimalist home menu for the Nintendo Switch, built with React. This project d
 npm i
 ```
 
-2. Build the project (Application bundle stored in /romfs/)
+2. Build the project (application bundle stored in /romfs/)
 
 ```bash
 npm run build
