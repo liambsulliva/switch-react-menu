@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Text } from "react-tela";
+import { Text, Rect } from "react-tela";
 import { AppIcon } from "./components/AppIcon";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
@@ -143,6 +143,13 @@ export function App() {
 
   return (
     <>
+      <Rect
+        x={0}
+        y={0}
+        width={screen.width}
+        height={screen.height}
+        fill="#0f0f0f"
+      />
       {visibleApps.map((displayedApp, index) => (
         <AppIcon
           key={index}

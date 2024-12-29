@@ -36,7 +36,7 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
       <Text
         x={displayedApp.x + displayedApp.width / 2}
         y={displayedApp.y + displayedApp.height + 20}
-        fill={isSelected ? "#00ff00" : "white"}
+        fill={isSelected ? "#7799E5" : "white"}
         fontSize={24}
         textAlign="center"
       >
