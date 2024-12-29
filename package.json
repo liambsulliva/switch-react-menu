@@ -4,9 +4,9 @@
     "title": "React Menu",
     "id": "0100d046e70f0000"
   },
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
-  "description": "A redesigned switch home menu, built in React.",
+  "description": "A minimalist home menu for the Nintendo Switch, built with React.",
   "scripts": {
     "build": "esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
     "nro": "nxjs-nro",
