@@ -20,7 +20,7 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
               width={displayedApp.width + 10}
               height={displayedApp.height + 10}
               fill="none"
-              stroke="white"
+              stroke="#7799E5"
             />
           )}
           <Image

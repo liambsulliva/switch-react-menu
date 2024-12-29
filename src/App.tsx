@@ -27,7 +27,7 @@ export function App() {
       const displayedApps: AppData[] = [];
 
       let x = gap;
-      const y = gap;
+      const y = (screen.height / 2) - 128;
 
       for (const app of switchApps) {
         let img;
@@ -163,6 +163,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+		fontWeight="700"
         onTouchStart={handlePrevPage}
       >
         {"< Prev"}
@@ -173,6 +174,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+		fontWeight="bold"
         textAlign="right"
         onTouchStart={handleNextPage}
       >
@@ -184,6 +186,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+		fontWeight="700"
         textAlign="center"
       >
         {`${currentPage + 1}/${totalPages}`}
