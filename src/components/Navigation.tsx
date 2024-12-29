@@ -21,6 +21,7 @@ export function Navigation({
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+        fontFamily="SourceSansPro"
         onTouchStart={onPrevPage}
       >
         {"< Prev"}
@@ -31,6 +32,7 @@ export function Navigation({
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+        fontFamily="SourceSansPro"
         textAlign="right"
         onTouchStart={onNextPage}
       >
@@ -42,6 +44,7 @@ export function Navigation({
         y={screen.height - 50}
         fill="white"
         fontSize={24}
+        fontFamily="SourceSansPro"
         textAlign="center"
       >
         {`${currentPage + 1}/${totalPages}`}

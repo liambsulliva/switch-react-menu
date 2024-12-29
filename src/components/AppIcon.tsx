@@ -38,6 +38,7 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
         y={displayedApp.y + displayedApp.height + 20}
         fill={isSelected ? "#7799E5" : "white"}
         fontSize={24}
+        fontFamily="SourceSansPro"
         textAlign="center"
       >
         {truncate(displayedApp.app.name, 17)}
