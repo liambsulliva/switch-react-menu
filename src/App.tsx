@@ -12,6 +12,7 @@ export function App() {
     L: false,
     R: false,
   });
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const gap = 48;
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
@@ -96,6 +97,34 @@ export function App() {
         setShouldersPressed((prev) => ({ ...prev, R: false }));
       }
 
+      const horizontalInput =
+        Math.abs(gamepad.axes[0]) > 0.5
+          ? Math.sign(gamepad.axes[0])
+          : gamepad.buttons[Button.Left].pressed
+          ? -1
+          : gamepad.buttons[Button.Right].pressed
+          ? 1
+          : 0;
+
+      if (horizontalInput !== 0) {
+        setSelectedIndex((prev) => {
+          const newIndex = prev + horizontalInput;
+          if (newIndex < 0) {
+            handlePrevPage();
+            return paginatedApps.length - 1;
+          }
+          if (newIndex >= paginatedApps.length) {
+            handleNextPage();
+            return 0;
+          }
+          return newIndex;
+        });
+      }
+
+      if (gamepad.buttons[Button.A].pressed && visibleApps[selectedIndex]) {
+        visibleApps[selectedIndex].app.launch();
+      }
+
       animationFrameId = requestAnimationFrame(handleGamepadInput);
     };
 
@@ -104,12 +133,23 @@ export function App() {
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [shouldersPressed, totalPages]);
+  }, [
+    shouldersPressed,
+    totalPages,
+    paginatedApps.length,
+    selectedIndex,
+    visibleApps,
+  ]);
 
   return (
     <>
       {visibleApps.map((displayedApp, index) => (
-        <AppIcon key={index} displayedApp={displayedApp} truncate={truncate} />
+        <AppIcon
+          key={index}
+          displayedApp={displayedApp}
+          truncate={truncate}
+          isSelected={index === selectedIndex}
+        />
       ))}
       <Text
         x={50}
