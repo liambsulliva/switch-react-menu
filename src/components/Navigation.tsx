@@ -21,7 +21,7 @@ export function Navigation({
         y={screen.height - 50}
         fill="#ddd"
         fontSize={24}
-        fontFamily="SourceSansPro-Regular"
+        fontFamily="SourceSansPro-Bold"
         onTouchStart={onPrevPage}
       >
         {"< Prev"}
@@ -32,7 +32,7 @@ export function Navigation({
         y={screen.height - 50}
         fill="#ddd"
         fontSize={24}
-        fontFamily="SourceSansPro-Regular"
+        fontFamily="SourceSansPro-Bold"
         textAlign="right"
         onTouchStart={onNextPage}
       >

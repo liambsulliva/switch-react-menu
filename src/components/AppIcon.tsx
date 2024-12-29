@@ -27,6 +27,7 @@ export function AppIcon({
               height={displayedApp.height + 10}
               fill="none"
               stroke="white"
+              lineWidth={5}
             />
           )}
           <Image
