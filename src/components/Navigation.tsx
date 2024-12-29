@@ -1,5 +1,5 @@
 import React from "react";
-import { Text } from "react-tela";
+import { Text, Rect } from "react-tela";
 
 interface NavigationProps {
   currentPage: number;
@@ -22,11 +22,17 @@ export function Navigation({
         fill="#ddd"
         fontSize={24}
         fontFamily="SourceSansPro-Bold"
-        onTouchStart={onPrevPage}
       >
         {"< Prev"}
       </Text>
-
+      <Rect
+        x={15}
+        y={screen.height - 85}
+        width={140}
+        height={80}
+        fill="transparent"
+        onTouchStart={onPrevPage}
+      />
       <Text
         x={screen.width - 50}
         y={screen.height - 50}
@@ -34,10 +40,17 @@ export function Navigation({
         fontSize={24}
         fontFamily="SourceSansPro-Bold"
         textAlign="right"
-        onTouchStart={onNextPage}
       >
         {"Next >"}
       </Text>
+      <Rect
+        x={screen.width - 155}
+        y={screen.height - 85}
+        width={140}
+        height={80}
+        fill="transparent"
+        onTouchStart={onNextPage}
+      />
 
       <Text
         x={screen.width / 2}
