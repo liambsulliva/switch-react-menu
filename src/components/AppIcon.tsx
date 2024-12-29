@@ -6,9 +6,15 @@ interface AppIconProps {
   displayedApp: AppData;
   truncate: (str: string, maxLength: number) => string;
   isSelected?: boolean;
+  onSelect: () => void;
 }
 
-export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
+export function AppIcon({
+  displayedApp,
+  truncate,
+  isSelected,
+  onSelect,
+}: AppIconProps) {
   return (
     <>
       {displayedApp.app.icon && (
@@ -20,7 +26,7 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
               width={displayedApp.width + 10}
               height={displayedApp.height + 10}
               fill="none"
-              stroke="#7799E5"
+              stroke="white"
             />
           )}
           <Image
@@ -29,16 +35,16 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
             y={displayedApp.y}
             width={displayedApp.width}
             height={displayedApp.height}
-            onTouchStart={() => displayedApp.app.launch()}
+            onTouchStart={onSelect}
           />
         </>
       )}
       <Text
         x={displayedApp.x + displayedApp.width / 2}
         y={displayedApp.y + displayedApp.height + 20}
-        fill={isSelected ? "#7799E5" : "white"}
+        fill={isSelected ? "white" : "#ddd"}
         fontSize={24}
-        fontFamily="SourceSansPro"
+        fontFamily={isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"}
         textAlign="center"
       >
         {truncate(displayedApp.app.name, 17)}

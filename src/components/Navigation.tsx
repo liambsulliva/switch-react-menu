@@ -19,9 +19,9 @@ export function Navigation({
       <Text
         x={50}
         y={screen.height - 50}
-        fill="white"
+        fill="#ddd"
         fontSize={24}
-        fontFamily="SourceSansPro"
+        fontFamily="SourceSansPro-Regular"
         onTouchStart={onPrevPage}
       >
         {"< Prev"}
@@ -30,9 +30,9 @@ export function Navigation({
       <Text
         x={screen.width - 50}
         y={screen.height - 50}
-        fill="white"
+        fill="#ddd"
         fontSize={24}
-        fontFamily="SourceSansPro"
+        fontFamily="SourceSansPro-Regular"
         textAlign="right"
         onTouchStart={onNextPage}
       >
@@ -42,9 +42,9 @@ export function Navigation({
       <Text
         x={screen.width / 2}
         y={screen.height - 50}
-        fill="white"
+        fill="#ddd"
         fontSize={24}
-        fontFamily="SourceSansPro"
+        fontFamily="SourceSansPro-Regular"
         textAlign="center"
       >
         {`${currentPage + 1}/${totalPages}`}

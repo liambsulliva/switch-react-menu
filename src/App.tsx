@@ -79,6 +79,14 @@ export function App() {
     selectedIndex,
   });
 
+  const handleAppSelect = (index: number) => {
+    if (index === selectedIndex) {
+      paginatedApps[selectedIndex].app.launch();
+    } else {
+      setSelectedIndex(index);
+    }
+  };
+
   return (
     <>
       <Rect
@@ -94,6 +102,7 @@ export function App() {
           displayedApp={displayedApp}
           truncate={truncate}
           isSelected={index === selectedIndex}
+          onSelect={() => handleAppSelect(index)}
         />
       ))}
       <Navigation
