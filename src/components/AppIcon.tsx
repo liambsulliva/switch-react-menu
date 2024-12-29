@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Text } from "react-tela";
+import { Image, Text, Rect } from "react-tela";
 import { AppData } from "../types/AppData";
 
 interface AppIconProps {
@@ -14,14 +14,13 @@ export function AppIcon({ displayedApp, truncate, isSelected }: AppIconProps) {
       {displayedApp.app.icon && (
         <>
           {isSelected && (
-            <rect
+            <Rect
               x={displayedApp.x - 5}
               y={displayedApp.y - 5}
               width={displayedApp.width + 10}
               height={displayedApp.height + 10}
               fill="none"
               stroke="white"
-              strokeWidth={2}
             />
           )}
           <Image
