@@ -13,6 +13,10 @@ export function App() {
     R: false,
   });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [directionalPressed, setDirectionalPressed] = useState({
+    Left: false,
+    Right: false,
+  });
   const gap = 48;
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
@@ -27,7 +31,7 @@ export function App() {
       const displayedApps: AppData[] = [];
 
       let x = gap;
-      const y = (screen.height / 2) - 128;
+      const y = screen.height / 2 - 128;
 
       for (const app of switchApps) {
         let img;
@@ -83,6 +87,7 @@ export function App() {
         return;
       }
 
+      // L/R shoulder buttons (existing code)
       if (gamepad.buttons[Button.L].pressed && !shouldersPressed.L) {
         setShouldersPressed((prev) => ({ ...prev, L: true }));
         handlePrevPage();
@@ -97,28 +102,42 @@ export function App() {
         setShouldersPressed((prev) => ({ ...prev, R: false }));
       }
 
-      const horizontalInput =
+      // Handle left input with debounce
+      const isLeftPressed =
         Math.abs(gamepad.axes[0]) > 0.5
-          ? Math.sign(gamepad.axes[0])
-          : gamepad.buttons[Button.Left].pressed
-          ? -1
-          : gamepad.buttons[Button.Right].pressed
-          ? 1
-          : 0;
-
-      if (horizontalInput !== 0) {
+          ? gamepad.axes[0] < -0.5
+          : gamepad.buttons[Button.Left].pressed;
+      if (isLeftPressed && !directionalPressed.Left) {
+        setDirectionalPressed((prev) => ({ ...prev, Left: true }));
         setSelectedIndex((prev) => {
-          const newIndex = prev + horizontalInput;
+          const newIndex = prev - 1;
           if (newIndex < 0) {
             handlePrevPage();
             return paginatedApps.length - 1;
           }
+          return newIndex;
+        });
+      } else if (!isLeftPressed && directionalPressed.Left) {
+        setDirectionalPressed((prev) => ({ ...prev, Left: false }));
+      }
+
+      // Handle right input with debounce
+      const isRightPressed =
+        Math.abs(gamepad.axes[0]) > 0.5
+          ? gamepad.axes[0] > 0.5
+          : gamepad.buttons[Button.Right].pressed;
+      if (isRightPressed && !directionalPressed.Right) {
+        setDirectionalPressed((prev) => ({ ...prev, Right: true }));
+        setSelectedIndex((prev) => {
+          const newIndex = prev + 1;
           if (newIndex >= paginatedApps.length) {
             handleNextPage();
             return 0;
           }
           return newIndex;
         });
+      } else if (!isRightPressed && directionalPressed.Right) {
+        setDirectionalPressed((prev) => ({ ...prev, Right: false }));
       }
 
       if (gamepad.buttons[Button.A].pressed && visibleApps[selectedIndex]) {
@@ -135,6 +154,7 @@ export function App() {
     };
   }, [
     shouldersPressed,
+    directionalPressed,
     totalPages,
     paginatedApps.length,
     selectedIndex,
@@ -163,7 +183,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
-		fontWeight="700"
+        fontWeight="700"
         onTouchStart={handlePrevPage}
       >
         {"< Prev"}
@@ -174,7 +194,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
-		fontWeight="bold"
+        fontWeight="bold"
         textAlign="right"
         onTouchStart={handleNextPage}
       >
@@ -186,7 +206,7 @@ export function App() {
         y={screen.height - 50}
         fill="white"
         fontSize={24}
-		fontWeight="700"
+        fontWeight="700"
         textAlign="center"
       >
         {`${currentPage + 1}/${totalPages}`}
