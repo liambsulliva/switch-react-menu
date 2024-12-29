@@ -74,9 +74,13 @@ export function App() {
   }));
 
   useEffect(() => {
+    let animationFrameId: number;
+
     const handleGamepadInput = () => {
       const gamepad = navigator.getGamepads()[0];
-      if (!gamepad) return;
+      if (!gamepad) {
+        return;
+      }
 
       if (gamepad.buttons[Button.L].pressed && !shouldersPressed.L) {
         setShouldersPressed((prev) => ({ ...prev, L: true }));
@@ -91,12 +95,14 @@ export function App() {
       } else if (!gamepad.buttons[Button.R].pressed && shouldersPressed.R) {
         setShouldersPressed((prev) => ({ ...prev, R: false }));
       }
+
+      animationFrameId = requestAnimationFrame(handleGamepadInput);
     };
 
-    const gamepadInterval = setInterval(handleGamepadInput, 16); // ~60fps
+    animationFrameId = requestAnimationFrame(handleGamepadInput);
 
     return () => {
-      clearInterval(gamepadInterval);
+      cancelAnimationFrame(animationFrameId);
     };
   }, [shouldersPressed, totalPages]);
 
