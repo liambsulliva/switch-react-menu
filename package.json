@@ -8,7 +8,8 @@
   "private": true,
   "description": "A minimalist home menu for the Nintendo Switch, built with React.",
   "scripts": {
-    "build": "esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
+    "copy-assets": "mkdir -p romfs && cp -r public/* romfs/",
+    "build": "npm run copy-assets && esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
     "nro": "nxjs-nro",
     "nsp": "nxjs-nsp"
   },
