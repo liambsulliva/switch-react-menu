@@ -1,6 +1,6 @@
 # Switch React Menu
 
-![Switch React Menu Banner](banner.jpg)
+![Switch React Menu Mockup](mockup.png)
 
 A minimalist home menu for the Nintendo Switch, built with React. This project relies on react-tela, which allows React components to be mounted to a `<canvas>` element instead of a DOM. This allows the nx.js runtime to natively render the components to the screen.
 
