@@ -34,6 +34,7 @@ A minimalist home menu for the Nintendo Switch, built with React. This project r
 ## Project Structure
 
 - `/src` - Source code
+  - `/browser` - Browser-specific code (polyfills, entrypoint)
   - `/components` - React components (AppIcon, Navigation)
   - `/hooks` - Custom React hooks for gamepad navigation
   - `/lib` - Utility functions
