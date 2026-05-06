@@ -50,7 +50,7 @@ npm i
 2. Build the project (application bundle stored in /romfs/)
 
 ```bash
-npm run build
+npm run build:switch
 ```
 
 3. Create a corresponding NRO/NSP file (Keys must be supplied for NSP)
@@ -62,7 +62,7 @@ npm run nsp # Creates NSP file
 
 4. Run the application on the Switch through your preferred Homebrew Launcher!
 
-## Browser Preview Pipeline (for testing)
+## Building/Testing in the Browser (DOM)
 
 `react-tela` renders to a generic `<canvas>`, so the same React tree that runs on Switch can be rendered in any modern browser once a few nx.js globals are polyfilled. This repository ships a Vite-based dev/prod pipeline that does exactly that, making it useful for quick iteration without needing to go through NRO/NSP bundling to test!
 
