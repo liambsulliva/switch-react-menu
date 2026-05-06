@@ -18,9 +18,10 @@ A minimalist home menu for the Nintendo Switch, built with React. This project r
 
 - React 18
 - TypeScript
-- nx.js (Nintendo Switch JavaScript runtime)
-- react-tela (canvas rendering library)
-- esbuild
+- [nx.js](https://github.com/TooTallNate/nx.js) (Nintendo Switch JavaScript runtime)
+- [react-tela](https://github.com/TooTallNate/react-tela) (canvas rendering library)
+- ESBuild (for NRO/NSP bundle)
+- Vite (for browser preview)
 
 ## Controls
 
@@ -38,7 +39,7 @@ A minimalist home menu for the Nintendo Switch, built with React. This project r
   - `/lib` - Utility functions
   - `/types` - TypeScript type definitions
 
-## Building From Source
+## Building From Source (for Switch)
 
 1. Install dependencies
 
@@ -59,7 +60,9 @@ npm run nro # Creates NRO file
 npm run nsp # Creates NSP file
 ```
 
-## Browser Preview Pipeline
+4. Run the application on the Switch through your preferred Homebrew Launcher!
+
+## Browser Preview Pipeline (for testing)
 
 `react-tela` renders to a generic `<canvas>`, so the same React tree that runs on Switch can be rendered in any modern browser once a few nx.js globals are polyfilled. This repository ships a Vite-based dev/prod pipeline that does exactly that, making it useful for quick iteration without needing to go through NRO/NSP bundling to test!
 
