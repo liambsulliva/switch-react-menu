@@ -16,4 +16,4 @@ async function loadFonts() {
 
 loadFonts();
 
-render(<App />, screen);
+render(<App />, screen as unknown as Parameters<typeof render>[1]);

@@ -4,3 +4,5 @@
 /romfs/
 /romfs/main.js
 /romfs/main.js.map
+/dist
+.DS_Store

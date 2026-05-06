@@ -58,3 +58,45 @@ npm run build
 npm run nro # Creates NRO file
 npm run nsp # Creates NSP file
 ```
+
+## Browser Preview Pipeline
+
+`react-tela` renders to a generic `<canvas>`, so the same React tree that runs on Switch can be rendered in any modern browser once a few nx.js globals are polyfilled. This repository ships a Vite-based dev/prod pipeline that does exactly that, making it useful for quick iteration without needing to go through NRO/NSP bundling to test!
+
+```bash
+npm run dev             # http://localhost:5173 with Hot Module Replacement (HMR)
+npm run build:browser   # static bundle in dist/browser
+npm run preview         # build + preview the static bundle
+```
+
+### How it works
+
+- `index.html` mounts a single `<canvas id="screen">` with a 1280x720 drawing buffer (the Switch's native resolution), CSS-scaled to fit the window it's running in.
+- `src/browser/main.tsx` is the browser entry. It installs polyfills for the nx.js globals _before_ dynamically importing `App.tsx`, so app code runs in a sandbox of sorts.
+- The polyfills (in `src/browser/polyfills/`) cover everything this project touches:
+  | Polyfill | Replaces | Notes |
+  |---|---|---|
+  | `screen.ts` | `globalThis.screen` | Points at the real `<canvas>`; `screen.width`/`screen.height` return the buffer size. |
+  | `fonts.ts` | `globalThis.fonts` | Aliases `document.fonts` so `fonts.add(new FontFace(...))` works. |
+  | `switch.ts` | `globalThis.Switch` | Implements `Switch.readFile` (via `fetch`) and `Switch.Application` |
+  | `keyboard-gamepad.ts` | `navigator.getGamepads` | Synthesizes a `Gamepad` whose buttons/axes are driven by the keyboard, using the same `Button` enum from `@nx.js/constants`. |
+  | `mouse-touch.ts` | the `<canvas>` listener | Turns clicks into `touchstart`/`touchend` events so on-screen tap targets respond to mouse input. |
+- Mock applications (`src/browser/mock-data/apps.ts`) generate gradient PNG icons at runtime via `OffscreenCanvas`. To preview real Switch icons instead, drop image files into `public/mock-icons/` and replace `generateIconBytes` with a `fetch()` call.
+
+### Browser keyboard mapping
+
+| Key                      | Switch input                                                          |
+| ------------------------ | --------------------------------------------------------------------- |
+| `←` `→` `↑` `↓` / `WASD` | D-pad + left stick (`Button.Left/Right/Up/Down`, `axes[0]`/`axes[1]`) |
+| `Q` / `E`                | `Button.L` / `Button.R` (page back / forward)                         |
+| `1` / `2`                | `Button.ZL` / `Button.ZR`                                             |
+| `Enter` `Space` `Z`      | `Button.A` (launch)                                                   |
+| `X`                      | `Button.B`                                                            |
+| `C` / `V`                | `Button.Y` / `Button.X`                                               |
+| `Backspace` `Esc`        | `Button.Minus`                                                        |
+| `Tab`                    | `Button.Plus`                                                         |
+| Mouse click on canvas    | Synthetic `touchstart`/`touchend` (drives `onTouchStart` props)       |
+
+### Adding new nx.js APIs to the polyfill
+
+When the app starts using a new `Switch.*` API, add a polyfill to `src/browser/polyfills/switch.ts`. Anything left uncovered throws an Exception on its first call, so it's easy to spot missing coverage during development.

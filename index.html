@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Switch React Menu — Browser Preview</title>
+    <link rel="icon" type="image/jpeg" href="/icon.jpg" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #ddd;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Scale 1280x720 screen buffer w/ CSS to fit the window visually */
+      #screen {
+        display: block;
+        max-width: 100vw;
+        max-height: 100vh;
+        aspect-ratio: 16 / 9;
+        background: #0f0f0f;
+        outline: none;
+        image-rendering: auto;
+      }
+
+      #help {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        opacity: 0.6;
+        pointer-events: none;
+        user-select: none;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      #help kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- tabindex makes the canvas focusable so it captures keyboard events -->
+    <canvas id="screen" width="1280" height="720" tabindex="0"></canvas>
+
+    <div id="help">
+      <kbd>←</kbd>/<kbd>→</kbd> select &nbsp;
+      <kbd>Q</kbd>/<kbd>E</kbd> page (L/R) &nbsp;
+      <kbd>Enter</kbd>/<kbd>Z</kbd> A &nbsp;
+      <kbd>X</kbd> B
+    </div>
+
+    <script type="module" src="/src/browser/main.tsx"></script>
+  </body>
+</html>

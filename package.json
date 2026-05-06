@@ -8,10 +8,14 @@
   "private": true,
   "description": "A minimalist home menu for the Nintendo Switch, built with React.",
   "scripts": {
+    "dev": "vite",
+    "preview": "vite build && vite preview",
+    "build:browser": "vite build",
     "copy-assets": "mkdir -p romfs && cp -r public/* romfs/",
-    "build": "npm run copy-assets && esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
-    "nro": "nxjs-nro",
-    "nsp": "nxjs-nsp"
+    "build:switch": "npm run copy-assets && esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
+    "build": "npm run build:switch",
+    "nro": "npm run build:switch && nxjs-nro",
+    "nsp": "npm run build:switch && nxjs-nsp"
   },
   "license": "MIT",
   "devDependencies": {
@@ -19,7 +23,10 @@
     "@nx.js/nsp": "^0.0.60",
     "@nx.js/runtime": "^0.0.60",
     "@types/react": "^18.2.56",
-    "esbuild": "^0.17.19"
+    "@vitejs/plugin-react": "^6.0.1",
+    "esbuild": "^0.17.19",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10"
   },
   "dependencies": {
     "@nx.js/constants": "^0.4.0",
