@@ -4,7 +4,7 @@
     "title": "React Menu",
     "id": "0100d046e70f0000"
   },
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "A minimalist home menu for the Nintendo Switch, built with React.",
   "scripts": {
