@@ -6,6 +6,8 @@ interface NavigationProps {
   totalPages: number;
   onPrevPage: () => void;
   onNextPage: () => void;
+  isNavigationFocused: boolean;
+  selectedNavButton: number;
 }
 
 export function Navigation({
@@ -13,13 +15,15 @@ export function Navigation({
   totalPages,
   onPrevPage,
   onNextPage,
+  isNavigationFocused,
+  selectedNavButton,
 }: NavigationProps) {
   return (
     <>
       <Text
         x={50}
         y={screen.height - 50}
-        fill="#ddd"
+        fill={isNavigationFocused && selectedNavButton === 0 ? "#fff" : "#666"}
         fontSize={24}
         fontFamily="SourceSansPro-Bold"
       >
@@ -36,7 +40,7 @@ export function Navigation({
       <Text
         x={screen.width - 50}
         y={screen.height - 50}
-        fill="#ddd"
+        fill={isNavigationFocused && selectedNavButton === 1 ? "#fff" : "#666"}
         fontSize={24}
         fontFamily="SourceSansPro-Bold"
         textAlign="right"

@@ -11,6 +11,10 @@ export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [focusArea, setFocusArea] = useState<"apps" | "navigation" | "settings">(
+    "apps",
+  );
+  const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const gap = 48;
 
@@ -79,6 +83,10 @@ export function App() {
     setSelectedIndex,
     paginatedApps,
     selectedIndex,
+    focusArea,
+    setFocusArea,
+    navButtonIndex: selectedNavButton,
+    setNavButtonIndex: setSelectedNavButton,
     isActive: !showSettings,
     onOpenSettings: () => setShowSettings(true),
   });
@@ -115,7 +123,7 @@ export function App() {
       <Text
         x={settingsBtnCenterX}
         y={settingsBtnCenterY}
-        fill="#666"
+        fill={focusArea === "settings" ? "#fff" : "#666"}
         fontSize={26}
         fontFamily="SourceSansPro-Regular"
         textAlign="center"
@@ -137,7 +145,7 @@ export function App() {
           key={index}
           displayedApp={displayedApp}
           truncate={truncate}
-          isSelected={index === selectedIndex}
+          isSelected={focusArea === "apps" && index === selectedIndex}
           onSelect={() => handleAppSelect(index)}
         />
       ))}
@@ -146,6 +154,8 @@ export function App() {
         totalPages={totalPages}
         onPrevPage={handlePrevPage}
         onNextPage={handleNextPage}
+        isNavigationFocused={focusArea === "navigation"}
+        selectedNavButton={selectedNavButton}
       />
     </>
   );
