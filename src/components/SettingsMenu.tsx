@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
-
-interface SettingItem {
-  label: string;
-  value: boolean;
-}
+import {
+  SETTING_LABELS,
+  SETTING_ORDER,
+  toggleSetting,
+  useSettings,
+} from "../settings/settingsStore";
 
 interface SettingsMenuProps {
   onClose: () => void;
@@ -28,21 +29,10 @@ const LIST_TOP = 130;
 const PADDING_X = 64;
 const FOOTER_HEIGHT = 80;
 
-const INITIAL_SETTINGS: SettingItem[] = [
-  { label: "Auto-Launch Game", value: false },
-  { label: "Show App Titles", value: true },
-  { label: "Enable Haptics", value: true },
-  { label: "Show Page Numbers", value: true },
-  { label: "Alphabetical Sort", value: false },
-  { label: "Compact View", value: false },
-  { label: "Show Last Played", value: false },
-  { label: "Enable Sounds", value: false },
-  { label: "Screensaver", value: true },
-];
-
 const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
 const visibleCount = Math.floor(listHeight / ITEM_HEIGHT);
 const panelWidth = screen.width - PADDING_X * 2;
+const settingCount = SETTING_ORDER.length;
 
 const TRACK_W = 56;
 const TRACK_H = 28;
@@ -59,7 +49,7 @@ function ensureVisible(index: number, offset: number): number {
 }
 
 export function SettingsMenu({ onClose }: SettingsMenuProps) {
-  const [items, setItems] = useState<SettingItem[]>(INITIAL_SETTINGS);
+  const settings = useSettings();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [buttonState, setButtonState] = useState<ButtonState>({
@@ -89,7 +79,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
         const next =
           direction === "up"
             ? Math.max(0, prev - 1)
-            : Math.min(items.length - 1, prev + 1);
+            : Math.min(settingCount - 1, prev + 1);
         setScrollOffset((off) => ensureVisible(next, off));
         return next;
       });
@@ -144,11 +134,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
 
       if (isA && !buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: true }));
-        setItems((prev) =>
-          prev.map((item, i) =>
-            i === selectedIndex ? { ...item, value: !item.value } : item,
-          ),
-        );
+        toggleSetting(SETTING_ORDER[selectedIndex]);
       } else if (!isA && buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: false }));
       }
@@ -165,25 +151,21 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, selectedIndex, items, onClose]);
+  }, [buttonState, selectedIndex, onClose]);
 
   const toggleItem = (index: number) => {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, value: !item.value } : item,
-      ),
-    );
+    toggleSetting(SETTING_ORDER[index]);
     setSelectedIndex(index);
   };
 
   const scrollbarTrackHeight = listHeight;
   const scrollbarThumbHeight = Math.max(
     24,
-    (visibleCount / items.length) * scrollbarTrackHeight,
+    (visibleCount / settingCount) * scrollbarTrackHeight,
   );
   const scrollbarThumbY =
     LIST_TOP +
-    (scrollOffset / (items.length - visibleCount)) *
+    (scrollOffset / (settingCount - visibleCount)) *
       (scrollbarTrackHeight - scrollbarThumbHeight);
 
   return (
@@ -235,13 +217,18 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
       <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
 
       {/* Settings rows */}
-      {items.slice(scrollOffset, scrollOffset + visibleCount).map((item, i) => {
+      {SETTING_ORDER.slice(
+        scrollOffset,
+        scrollOffset + visibleCount,
+      ).map((settingKey, i) => {
         const absoluteIndex = scrollOffset + i;
         const isSelected = absoluteIndex === selectedIndex;
+        const value = settings[settingKey];
+        const label = SETTING_LABELS[settingKey];
         const rowY = LIST_TOP + i * ITEM_HEIGHT;
         const trackY = rowY + (ITEM_HEIGHT - TRACK_H) / 2;
         const knobX =
-          TRACK_X + (item.value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
+          TRACK_X + (value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
         const knobY = trackY + (TRACK_H - KNOB_SIZE) / 2;
 
         return (
@@ -287,7 +274,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
               }
               textBaseline="middle"
             >
-              {item.label}
+              {label}
             </Text>
 
             {/* Toggle track */}
@@ -296,7 +283,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
               y={trackY}
               width={TRACK_W}
               height={TRACK_H}
-              fill={item.value ? "#4a9eff" : "#333"}
+              fill={value ? "#4a9eff" : "#333"}
             />
 
             {/* Toggle knob */}
@@ -305,14 +292,14 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
               y={knobY}
               width={KNOB_SIZE}
               height={KNOB_SIZE}
-              fill={item.value ? "white" : "#666"}
+              fill={value ? "white" : "#666"}
             />
           </React.Fragment>
         );
       })}
 
       {/* Scrollbar track */}
-      {items.length > visibleCount && (
+      {settingCount > visibleCount && (
         <>
           <Rect
             x={screen.width - PADDING_X + 8}

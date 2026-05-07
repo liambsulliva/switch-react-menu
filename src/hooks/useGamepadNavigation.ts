@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
+import { recordLastPlayed } from "../settings/lastPlayedStore";
 
 interface GamepadNavigationProps {
   onPrevPage: () => void;
@@ -272,7 +273,9 @@ export function useGamepadNavigation({
       if (gamepad.buttons[Button.A].pressed && !gamepadState.aPressed) {
         setGamepadState((prev) => ({ ...prev, aPressed: true }));
         if (focusArea === "apps" && paginatedApps[selectedIndex]) {
-          paginatedApps[selectedIndex].app.launch();
+          const app = paginatedApps[selectedIndex].app;
+          recordLastPlayed(app);
+          app.launch();
         } else if (focusArea === "navigation") {
           if (navButtonIndex === 0) {
             onPrevPage();

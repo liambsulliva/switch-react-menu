@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Rect, Text } from "react-tela";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
@@ -6,9 +6,16 @@ import { AppIcon } from "./components/AppIcon";
 import { Navigation } from "./components/Navigation";
 import { SettingsMenu } from "./components/SettingsMenu";
 import { useGamepadNavigation } from "./hooks/useGamepadNavigation";
+import {
+  recordLastPlayed,
+  useLastPlayedApplicationId,
+} from "./settings/lastPlayedStore";
+import { useSettings } from "./settings/settingsStore";
 
 export function App() {
-  const [apps, setApps] = useState<AppData[]>([]);
+  const settings = useSettings();
+  const lastPlayedId = useLastPlayedApplicationId();
+  const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [focusArea, setFocusArea] = useState<"apps" | "navigation" | "settings">(
@@ -16,7 +23,16 @@ export function App() {
   );
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const gap = 48;
+  const gap = settings.compactView ? 28 : 48;
+
+  const apps = useMemo(() => {
+    if (!settings.alphabeticalSort) {
+      return rawApps;
+    }
+    return [...rawApps].sort((a, b) =>
+      a.app.name.localeCompare(b.app.name, undefined, { sensitivity: "base" }),
+    );
+  }, [rawApps, settings.alphabeticalSort]);
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
     return Math.floor((screen.width - gap) / (firstItemWidth + gap));
@@ -50,7 +66,7 @@ export function App() {
         x += img.width + gap;
       }
 
-      setApps(displayedApps);
+      setRawApps(displayedApps);
     };
 
     loadApps();
@@ -93,7 +109,9 @@ export function App() {
 
   const handleAppSelect = (index: number) => {
     if (index === selectedIndex) {
-      paginatedApps[selectedIndex].app.launch();
+      const app = paginatedApps[selectedIndex].app;
+      recordLastPlayed(app);
+      app.launch();
     } else {
       setSelectedIndex(index);
     }
@@ -142,11 +160,17 @@ export function App() {
 
       {visibleApps.map((displayedApp, index) => (
         <AppIcon
-          key={index}
+          key={displayedApp.app.id.toString()}
           displayedApp={displayedApp}
           truncate={truncate}
           isSelected={focusArea === "apps" && index === selectedIndex}
           onSelect={() => handleAppSelect(index)}
+          showTitle={settings.showAppTitles}
+          showLastPlayedEyebrow={
+            settings.showLastPlayed &&
+            lastPlayedId !== null &&
+            displayedApp.app.id.toString() === lastPlayedId
+          }
         />
       ))}
       <Navigation
@@ -156,6 +180,7 @@ export function App() {
         onNextPage={handleNextPage}
         isNavigationFocused={focusArea === "navigation"}
         selectedNavButton={selectedNavButton}
+        showPageNumbers={settings.showPageNumbers}
       />
     </>
   );

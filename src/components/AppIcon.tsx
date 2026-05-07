@@ -7,6 +7,8 @@ interface AppIconProps {
   truncate: (str: string, maxLength: number) => string;
   isSelected?: boolean;
   onSelect: () => void;
+  showTitle?: boolean;
+  showLastPlayedEyebrow?: boolean;
 }
 
 export function AppIcon({
@@ -14,9 +16,26 @@ export function AppIcon({
   truncate,
   isSelected,
   onSelect,
+  showTitle = true,
+  showLastPlayedEyebrow = false,
 }: AppIconProps) {
+  const iconBottom = displayedApp.y + displayedApp.height;
+
   return (
     <>
+      {showLastPlayedEyebrow && (
+        <Text
+          x={displayedApp.x}
+          y={displayedApp.y - 6}
+          fill="#8ec5ff"
+          fontSize={16}
+          fontFamily="SourceSansPro-Bold"
+          textAlign="left"
+          textBaseline="bottom"
+        >
+          Last Played!
+        </Text>
+      )}
       {displayedApp.app.icon && (
         <>
           {isSelected && (
@@ -40,16 +59,20 @@ export function AppIcon({
           />
         </>
       )}
-      <Text
-        x={displayedApp.x + displayedApp.width / 2}
-        y={displayedApp.y + displayedApp.height + 20}
-        fill={isSelected ? "white" : "#ddd"}
-        fontSize={24}
-        fontFamily={isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"}
-        textAlign="center"
-      >
-        {truncate(displayedApp.app.name, 17)}
-      </Text>
+      {showTitle && (
+        <Text
+          x={displayedApp.x + displayedApp.width / 2}
+          y={iconBottom + 20}
+          fill={isSelected ? "white" : "#ddd"}
+          fontSize={24}
+          fontFamily={
+            isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
+          }
+          textAlign="center"
+        >
+          {truncate(displayedApp.app.name, 17)}
+        </Text>
+      )}
     </>
   );
 }
