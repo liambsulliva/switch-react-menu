@@ -3,6 +3,8 @@ import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { COLORS } from "../lib/colors";
+import { List } from "./List";
+import type { ListElementModel } from "./ListElement";
 
 interface CustomSortModeProps {
   apps: Switch.Application[];
@@ -18,8 +20,6 @@ const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
 const GRID_SIDE_MARGIN = 24;
 const COMPACT_ROW_HEIGHT = 84;
-const COMPACT_ICON_SIZE = 60;
-const COMPACT_ICON_GUTTER = 24;
 const HELD_LIFT = 24;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
@@ -452,26 +452,29 @@ export function CustomSortMode({
   }
 
   // ─── COMPACT (LIST) LAYOUT ───────────────────────────────────────────────────
-  const visibleRows = orderedApps.slice(
-    scrollOffset,
-    scrollOffset + compactVisibleCount,
+  const compactListItems = useMemo<ListElementModel[]>(
+    () =>
+      orderedApps.map((app, index) => {
+        const isSelected = index === selectedIndex;
+        const isHeld = isSelected && isHolding;
+        return {
+          id: app.id.toString(),
+          label: truncate(app.name, 38),
+          variant: "game" as const,
+          gameIconSrc: app.icon ? getIconUrl(app) : undefined,
+          valueColorOverride: isSelected
+            ? isHeld
+              ? COLORS.accent
+              : COLORS.gray[0]
+            : COLORS.gray[100],
+          rowSelectedFill: isHeld ? COLORS.rowSelectedBg : COLORS.rowSelected,
+        };
+      }),
+    [orderedApps, selectedIndex, isHolding],
   );
-  const labelLeftX = PADDING_X + COMPACT_ICON_GUTTER + COMPACT_ICON_SIZE + 24;
   const legendTextCompact = isHolding
     ? "A  Drop      B  Cancel Move"
     : "A  Pick Up      B  Exit      +  Save";
-
-  const showScrollbar = appCount > compactVisibleCount;
-  const scrollDenominator = Math.max(1, appCount - compactVisibleCount);
-  const scrollbarTrackHeight = listHeight;
-  const scrollbarThumbHeight = Math.max(
-    24,
-    (compactVisibleCount / Math.max(1, appCount)) * scrollbarTrackHeight,
-  );
-  const scrollbarThumbY =
-    HEADER_HEIGHT +
-    (scrollOffset / scrollDenominator) *
-      (scrollbarTrackHeight - scrollbarThumbHeight);
 
   return (
     <>
@@ -518,87 +521,16 @@ export function CustomSortMode({
         fill={COLORS.gray[700]}
       />
 
-      {/* App rows */}
-      {visibleRows.map((app, i) => {
-        const absoluteIndex = scrollOffset + i;
-        const isSelected = absoluteIndex === selectedIndex;
-        const isHeld = isSelected && isHolding;
-        const rowY = HEADER_HEIGHT + i * COMPACT_ROW_HEIGHT;
-        const iconY = rowY + (COMPACT_ROW_HEIGHT - COMPACT_ICON_SIZE) / 2;
-
-        return (
-          <React.Fragment key={app.id.toString()}>
-            {/* Row background */}
-            {isSelected && (
-              <Rect
-                x={PADDING_X}
-                y={rowY}
-                width={panelWidth}
-                height={COMPACT_ROW_HEIGHT}
-                fill={isHeld ? COLORS.rowSelectedBg : COLORS.rowSelected}
-              />
-            )}
-
-            {/* Row separator */}
-            <Rect
-              x={PADDING_X}
-              y={rowY + COMPACT_ROW_HEIGHT - 1}
-              width={panelWidth}
-              height={1}
-              fill={COLORS.gray[800]}
-            />
-
-            {app.icon && (
-              <Image
-                src={getIconUrl(app)}
-                x={PADDING_X + COMPACT_ICON_GUTTER}
-                y={iconY}
-                width={COMPACT_ICON_SIZE}
-                height={COMPACT_ICON_SIZE}
-              />
-            )}
-
-            <Text
-              x={labelLeftX}
-              y={rowY + COMPACT_ROW_HEIGHT / 2}
-              fill={
-                isSelected
-                  ? isHeld
-                    ? COLORS.accent
-                    : COLORS.gray[0]
-                  : COLORS.gray[100]
-              }
-              fontSize={26}
-              fontFamily={
-                isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
-              }
-              textBaseline="middle"
-            >
-              {truncate(app.name, 38)}
-            </Text>
-          </React.Fragment>
-        );
-      })}
-
-      {/* Scrollbar */}
-      {showScrollbar && (
-        <>
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={HEADER_HEIGHT}
-            width={4}
-            height={scrollbarTrackHeight}
-            fill={COLORS.gray[700]}
-          />
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={scrollbarThumbY}
-            width={4}
-            height={scrollbarThumbHeight}
-            fill={COLORS.gray[500]}
-          />
-        </>
-      )}
+      <List
+        x={PADDING_X}
+        top={HEADER_HEIGHT}
+        width={panelWidth}
+        rowHeight={COMPACT_ROW_HEIGHT}
+        visibleCount={compactVisibleCount}
+        items={compactListItems}
+        selectedIndex={selectedIndex}
+        scrollOffset={scrollOffset}
+      />
 
       {/* Footer divider */}
       <Rect

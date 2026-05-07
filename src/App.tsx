@@ -14,10 +14,7 @@ import {
   useLastPlayedApplicationId,
 } from "./settings/lastPlayedStore";
 import { setSettings, useSettings } from "./settings/settingsStore";
-import {
-  setCustomOrder,
-  useCustomOrder,
-} from "./settings/customSortStore";
+import { setCustomOrder, useCustomOrder } from "./settings/customSortStore";
 import { COLORS } from "./lib/colors";
 
 export function App() {

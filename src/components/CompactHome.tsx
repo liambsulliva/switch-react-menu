@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Image, Rect, Text } from "react-tela";
+import { Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
 import { COLORS } from "../lib/colors";
+import { List } from "./List";
+import type { ListElementModel } from "./ListElement";
 import {
   recordLastPlayed,
   useLastPlayedApplicationId,
@@ -16,9 +18,6 @@ const ROW_HEIGHT = 84;
 const LIST_TOP = 130;
 const PADDING_X = 64;
 const FOOTER_HEIGHT = 80;
-const ICON_SIZE = 60;
-const ICON_GUTTER = 24;
-
 const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
 const visibleRowCount = Math.floor(listHeight / ROW_HEIGHT);
 const panelWidth = screen.width - PADDING_X * 2;
@@ -290,6 +289,34 @@ export function CompactHome() {
     }
   }, [showSettings, showCustomSort]);
 
+  const listItems = useMemo<ListElementModel[]>(
+    () =>
+      sortedApps.map((app, index) => {
+        const isSelected = focusArea === "apps" && index === selectedIndex;
+        const isLastPlayed =
+          settings.showLastPlayed &&
+          lastPlayedId !== null &&
+          app.id.toString() === lastPlayedId;
+        return {
+          id: app.id.toString(),
+          label: settings.showAppTitles ? truncate(app.name, 38) : "",
+          variant: "game" as const,
+          gameIconSrc: app.icon ? getIconUrl(app, app.icon) : undefined,
+          gameVersion: `v${app.version}`,
+          gameEyebrow: isLastPlayed ? "Last Played!" : undefined,
+          valueColorOverride: isSelected ? COLORS.gray[0] : COLORS.gray[200],
+        };
+      }),
+    [
+      sortedApps,
+      focusArea,
+      selectedIndex,
+      settings.showLastPlayed,
+      settings.showAppTitles,
+      lastPlayedId,
+    ],
+  );
+
   if (showSettings) {
     return (
       <SettingsMenu
@@ -316,26 +343,6 @@ export function CompactHome() {
       />
     );
   }
-
-  const showScrollbar = appCount > visibleRowCount;
-  const visibleRows = sortedApps.slice(
-    scrollOffset,
-    scrollOffset + visibleRowCount,
-  );
-
-  const scrollDenominator = Math.max(1, appCount - visibleRowCount);
-  const scrollbarTrackHeight = listHeight;
-  const scrollbarThumbHeight = Math.max(
-    24,
-    (visibleRowCount / Math.max(1, appCount)) * scrollbarTrackHeight,
-  );
-  const scrollbarThumbY =
-    LIST_TOP +
-    (scrollOffset / scrollDenominator) *
-      (scrollbarTrackHeight - scrollbarThumbHeight);
-
-  const labelLeftX = PADDING_X + ICON_GUTTER + ICON_SIZE + 24;
-  const versionRightX = PADDING_X + panelWidth - (showScrollbar ? 32 : 24);
 
   return (
     <>
@@ -386,22 +393,18 @@ export function CompactHome() {
       {/* Header divider */}
       <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
 
-      {/* App rows */}
-      {visibleRows.map((app, i) => {
-        const absoluteIndex = scrollOffset + i;
-        const isSelected =
-          focusArea === "apps" && absoluteIndex === selectedIndex;
-        const rowY = LIST_TOP + i * ROW_HEIGHT;
-        const iconY = rowY + (ROW_HEIGHT - ICON_SIZE) / 2;
-        const isLastPlayed =
-          settings.showLastPlayed &&
-          lastPlayedId !== null &&
-          app.id.toString() === lastPlayedId;
-        const labelCenterY = isLastPlayed
-          ? rowY + ROW_HEIGHT / 2 + 6
-          : rowY + ROW_HEIGHT / 2;
-
-        const onRowTouch = () => {
+      <List
+        x={PADDING_X}
+        top={LIST_TOP}
+        width={panelWidth}
+        rowHeight={ROW_HEIGHT}
+        visibleCount={visibleRowCount}
+        items={listItems}
+        selectedIndex={selectedIndex}
+        scrollOffset={scrollOffset}
+        onItemTouchStart={(absoluteIndex) => {
+          const app = sortedApps[absoluteIndex];
+          if (!app) return;
           setFocusArea("apps");
           if (selectedIndex !== absoluteIndex) {
             setSelectedIndex(absoluteIndex);
@@ -410,91 +413,8 @@ export function CompactHome() {
           }
           recordLastPlayed(app);
           app.launch();
-        };
-
-        return (
-          <React.Fragment key={app.id.toString()}>
-            {isSelected && (
-              <Rect
-                x={PADDING_X}
-                y={rowY}
-                width={panelWidth}
-                height={ROW_HEIGHT}
-                fill="#1a1a1a"
-              />
-            )}
-
-            {/* Row separator */}
-            <Rect
-              x={PADDING_X}
-              y={rowY + ROW_HEIGHT - 1}
-              width={panelWidth}
-              height={1}
-              fill="#1e1e1e"
-            />
-
-            {/* Touch target — full row */}
-            <Rect
-              x={PADDING_X}
-              y={rowY}
-              width={panelWidth}
-              height={ROW_HEIGHT}
-              fill="transparent"
-              onTouchStart={onRowTouch}
-            />
-
-            {app.icon && (
-              <Image
-                src={getIconUrl(app, app.icon)}
-                x={PADDING_X + ICON_GUTTER}
-                y={iconY}
-                width={ICON_SIZE}
-                height={ICON_SIZE}
-              />
-            )}
-
-            {isLastPlayed && (
-              <Text
-                x={labelLeftX}
-                y={rowY + ROW_HEIGHT / 2 - 16}
-                fill={COLORS.eyebrowLabel}
-                fontSize={16}
-                fontFamily="SourceSansPro-Bold"
-                textBaseline="middle"
-              >
-                Last Played!
-              </Text>
-            )}
-
-            {settings.showAppTitles && (
-              <Text
-                x={labelLeftX}
-                y={labelCenterY}
-                fill={isSelected ? COLORS.gray[0] : COLORS.gray[200]}
-                fontSize={26}
-                fontFamily={
-                  isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
-                }
-                textBaseline="middle"
-              >
-                {truncate(app.name, 38)}
-              </Text>
-            )}
-
-            <Text
-              x={versionRightX}
-              y={rowY + ROW_HEIGHT / 2}
-              fill={isSelected ? "#bbb" : "#555"}
-              fontSize={20}
-              fontFamily="SourceSansPro-Regular"
-              textAlign="right"
-              textBaseline="middle"
-            >
-              {`v${app.version}`}
-            </Text>
-          </React.Fragment>
-        );
-      })}
+        }}
+      />
 
       {/* Empty-state message */}
       {appCount === 0 && (
@@ -509,26 +429,6 @@ export function CompactHome() {
         >
           No applications installed.
         </Text>
-      )}
-
-      {/* Scrollbar */}
-      {showScrollbar && (
-        <>
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={LIST_TOP}
-            width={4}
-            height={scrollbarTrackHeight}
-            fill="#222"
-          />
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={scrollbarThumbY}
-            width={4}
-            height={scrollbarThumbHeight}
-            fill="#555"
-          />
-        </>
       )}
 
       {/* Footer divider */}

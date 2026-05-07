@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import {
@@ -8,6 +8,8 @@ import {
   useSettings,
 } from "../settings/settingsStore";
 import { COLORS } from "../lib/colors";
+import { List } from "./List";
+import type { ListElementModel } from "./ListElement";
 
 interface SettingsMenuProps {
   onClose: () => void;
@@ -34,15 +36,6 @@ const FOOTER_HEIGHT = 80;
 const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
 const visibleCount = Math.floor(listHeight / ITEM_HEIGHT);
 const panelWidth = screen.width - PADDING_X * 2;
-const settingCount = SETTING_ORDER.length;
-const totalItemCount = settingCount + 1;
-const CUSTOM_SORT_INDEX = settingCount;
-
-const TRACK_W = 56;
-const TRACK_H = 28;
-const KNOB_SIZE = 22;
-const KNOB_PAD = 3;
-const TRACK_X = PADDING_X + panelWidth - TRACK_W - 48;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
 
@@ -54,7 +47,46 @@ function ensureVisible(index: number, offset: number): number {
 
 export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
   const settings = useSettings();
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const listElements = useMemo<ListElementModel[]>(
+    () => [
+      ...SETTING_ORDER.map((settingKey) => ({
+        id: settingKey as string,
+        label: SETTING_LABELS[settingKey],
+        variant: "knob" as const,
+        knobValue: settings[settingKey],
+        disabled: false,
+        onSelect: () => toggleSetting(settingKey),
+      })),
+      {
+        id: "compact-view-state",
+        label: "Layout",
+        variant: "select" as const,
+        selectValue: settings.compactView ? "Compact" : "Breathable",
+        disabled: true,
+        onSelect: () => {},
+      },
+      {
+        id: "custom-sort",
+        label: "Custom Sort",
+        variant: "dropdown" as const,
+        disabled: false,
+        onSelect: () => onCustomSort?.(),
+      },
+    ],
+    [settings, onCustomSort],
+  );
+  const selectableIndexes = useMemo(
+    () =>
+      listElements
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => !item.disabled)
+        .map(({ index }) => index),
+    [listElements],
+  );
+  const totalItemCount = listElements.length;
+  const [selectedIndex, setSelectedIndex] = useState(
+    () => selectableIndexes[0] ?? 0,
+  );
   const [scrollOffset, setScrollOffset] = useState(0);
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
@@ -64,6 +96,32 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ up: null, down: null });
   const gamepadArmedRef = useRef(false);
+
+  const getNextSelectableIndex = (
+    current: number,
+    direction: "up" | "down",
+  ): number => {
+    if (selectableIndexes.length === 0) return current;
+    if (!selectableIndexes.includes(current)) {
+      return selectableIndexes[0];
+    }
+
+    let candidate = current;
+    while (true) {
+      candidate += direction === "up" ? -1 : 1;
+      if (candidate < 0 || candidate >= totalItemCount) return current;
+      if (!listElements[candidate].disabled) return candidate;
+    }
+  };
+
+  useEffect(() => {
+    if (selectableIndexes.length === 0) return;
+    if (!selectableIndexes.includes(selectedIndex)) {
+      const next = selectableIndexes[0];
+      setSelectedIndex(next);
+      setScrollOffset((off) => ensureVisible(next, off));
+    }
+  }, [selectableIndexes, selectedIndex]);
 
   useEffect(() => {
     let rafId: number;
@@ -81,10 +139,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
 
     const moveSelection = (direction: "up" | "down") => {
       setSelectedIndex((prev) => {
-        const next =
-          direction === "up"
-            ? Math.max(0, prev - 1)
-            : Math.min(totalItemCount - 1, prev + 1);
+        const next = getNextSelectableIndex(prev, direction);
         setScrollOffset((off) => ensureVisible(next, off));
         return next;
       });
@@ -148,11 +203,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
 
       if (isA && !buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: true }));
-        if (selectedIndex === CUSTOM_SORT_INDEX) {
-          onCustomSort?.();
-        } else {
-          toggleSetting(SETTING_ORDER[selectedIndex]);
-        }
+        listElements[selectedIndex]?.onSelect?.();
       } else if (!isA && buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: false }));
       }
@@ -169,24 +220,13 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, selectedIndex, onClose]);
+  }, [buttonState, selectedIndex, onClose, listElements]);
 
   const toggleItem = (index: number) => {
+    if (listElements[index]?.disabled) return;
     setSelectedIndex(index);
-    if (index < settingCount) {
-      toggleSetting(SETTING_ORDER[index]);
-    }
+    listElements[index]?.onSelect?.();
   };
-
-  const scrollbarTrackHeight = listHeight;
-  const scrollbarThumbHeight = Math.max(
-    24,
-    (visibleCount / totalItemCount) * scrollbarTrackHeight,
-  );
-  const scrollbarThumbY =
-    LIST_TOP +
-    (scrollOffset / Math.max(1, totalItemCount - visibleCount)) *
-      (scrollbarTrackHeight - scrollbarThumbHeight);
 
   return (
     <>
@@ -236,167 +276,17 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
       {/* Header divider */}
       <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
 
-      {/* Settings rows */}
-      {SETTING_ORDER.slice(scrollOffset, scrollOffset + visibleCount).map(
-        (settingKey, i) => {
-          const absoluteIndex = scrollOffset + i;
-          const isSelected = absoluteIndex === selectedIndex;
-          const value = settings[settingKey];
-          const label = SETTING_LABELS[settingKey];
-          const rowY = LIST_TOP + i * ITEM_HEIGHT;
-          const trackY = rowY + (ITEM_HEIGHT - TRACK_H) / 2;
-          const knobX =
-            TRACK_X + (value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
-          const knobY = trackY + (TRACK_H - KNOB_SIZE) / 2;
-
-          return (
-            <React.Fragment key={absoluteIndex}>
-              {/* Selection highlight */}
-              {isSelected && (
-                <Rect
-                  x={PADDING_X}
-                  y={rowY}
-                  width={panelWidth}
-                  height={ITEM_HEIGHT}
-                  fill="#1a1a1a"
-                />
-              )}
-
-              {/* Row separator */}
-              <Rect
-                x={PADDING_X}
-                y={rowY + ITEM_HEIGHT - 1}
-                width={panelWidth}
-                height={1}
-                fill={COLORS.gray[800]}
-              />
-
-              {/* Touch target — full row, centered on the row */}
-              <Rect
-                x={PADDING_X}
-                y={rowY}
-                width={panelWidth}
-                height={ITEM_HEIGHT}
-                fill="transparent"
-                onTouchStart={() => toggleItem(absoluteIndex)}
-              />
-
-              {/* Label — vertically centered in row */}
-              <Text
-                x={PADDING_X + 24}
-                y={rowY + ITEM_HEIGHT / 2}
-                fill={isSelected ? COLORS.gray[0] : COLORS.gray[300]}
-                fontSize={26}
-                fontFamily={
-                  isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
-                }
-                textBaseline="middle"
-              >
-                {label}
-              </Text>
-
-              {/* Toggle track */}
-              <Rect
-                x={TRACK_X}
-                y={trackY}
-                width={TRACK_W}
-                height={TRACK_H}
-                fill={value ? COLORS.accent : COLORS.gray[600]}
-              />
-
-              {/* Toggle knob */}
-              <Rect
-                x={knobX}
-                y={knobY}
-                width={KNOB_SIZE}
-                height={KNOB_SIZE}
-                fill={value ? COLORS.gray[0] : COLORS.gray[400]}
-              />
-            </React.Fragment>
-          );
-        },
-      )}
-
-      {/* Custom Sort action row */}
-      {(() => {
-        const absoluteIndex = CUSTOM_SORT_INDEX;
-        const visiblePosition = absoluteIndex - scrollOffset;
-        if (visiblePosition < 0 || visiblePosition >= visibleCount) return null;
-        const isSelected = absoluteIndex === selectedIndex;
-        const rowY = LIST_TOP + visiblePosition * ITEM_HEIGHT;
-        const arrowX = TRACK_X + TRACK_W / 2;
-        return (
-          <React.Fragment key="custom-sort">
-            {isSelected && (
-              <Rect
-                x={PADDING_X}
-                y={rowY}
-                width={panelWidth}
-                height={ITEM_HEIGHT}
-                fill={COLORS.rowSelected}
-              />
-            )}
-            <Rect
-              x={PADDING_X}
-              y={rowY + ITEM_HEIGHT - 1}
-              width={panelWidth}
-              height={1}
-              fill={COLORS.gray[800]}
-            />
-            <Rect
-              x={PADDING_X}
-              y={rowY}
-              width={panelWidth}
-              height={ITEM_HEIGHT}
-              fill="transparent"
-              onTouchStart={() => onCustomSort?.()}
-            />
-            <Text
-              x={PADDING_X + 24}
-              y={rowY + ITEM_HEIGHT / 2}
-              fill={isSelected ? COLORS.gray[0] : COLORS.gray[400]}
-              fontSize={26}
-              fontFamily={
-                isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
-              }
-              textBaseline="middle"
-            >
-              Custom Sort
-            </Text>
-            <Text
-              x={arrowX}
-              y={rowY + ITEM_HEIGHT / 2}
-              fill={isSelected ? COLORS.accent : COLORS.gray[400]}
-              fontSize={28}
-              fontFamily="SourceSansPro-Bold"
-              textAlign="center"
-              textBaseline="middle"
-            >
-              {"›"}
-            </Text>
-          </React.Fragment>
-        );
-      })()}
-
-      {/* Scrollbar track */}
-      {totalItemCount > visibleCount && (
-        <>
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={LIST_TOP}
-            width={4}
-            height={scrollbarTrackHeight}
-            fill={COLORS.gray[700]}
-          />
-          <Rect
-            x={screen.width - PADDING_X + 8}
-            y={scrollbarThumbY}
-            width={4}
-            height={scrollbarThumbHeight}
-            fill={COLORS.gray[400]}
-          />
-        </>
-      )}
+      <List
+        x={PADDING_X}
+        top={LIST_TOP}
+        width={panelWidth}
+        rowHeight={ITEM_HEIGHT}
+        visibleCount={visibleCount}
+        items={listElements}
+        selectedIndex={selectedIndex}
+        scrollOffset={scrollOffset}
+        onItemTouchStart={toggleItem}
+      />
 
       {/* Footer divider */}
       <Rect
