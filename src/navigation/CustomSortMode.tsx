@@ -23,6 +23,16 @@ const COMPACT_ROW_HEIGHT = 84;
 const HELD_LIFT = 24;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
+const SAVE_TRANSITION_FRAME_COUNT = 2;
+
+type DecodableImageLike = {
+  complete: boolean;
+  decode?: () => Promise<void>;
+};
+
+type DocumentWithImages = {
+  images: Iterable<DecodableImageLike>;
+};
 
 const panelWidth = screen.width - PADDING_X * 2;
 const listHeight = screen.height - HEADER_HEIGHT - FOOTER_HEIGHT;
@@ -45,6 +55,87 @@ function ensureVisibleCompact(index: number, offset: number): number {
   if (index >= offset + compactVisibleCount)
     return index - compactVisibleCount + 1;
   return offset;
+}
+
+type EventTargetWithListeners = {
+  addEventListener: (
+    type: string,
+    callback: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions,
+  ) => void;
+  removeEventListener: (
+    type: string,
+    callback: (event: Event) => void,
+    options?: boolean | EventListenerOptions,
+  ) => void;
+};
+
+function isEventTargetWithListeners(
+  value: unknown,
+): value is EventTargetWithListeners {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "addEventListener" in value &&
+    "removeEventListener" in value
+  );
+}
+
+function waitForNextFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function waitForPostLayoutFrames(): Promise<void> {
+  for (let i = 0; i < SAVE_TRANSITION_FRAME_COUNT; i += 1) {
+    await waitForNextFrame();
+  }
+}
+
+async function waitForDocumentImages(): Promise<void> {
+  const maybeDocument = (globalThis as Record<string, unknown>)["document"];
+  if (
+    !maybeDocument ||
+    typeof maybeDocument !== "object" ||
+    !("images" in maybeDocument)
+  ) {
+    return;
+  }
+  const imageNodes = Array.from(
+    (maybeDocument as DocumentWithImages).images ?? [],
+  );
+  if (imageNodes.length === 0) return;
+  await Promise.all(
+    imageNodes.map(async (img) => {
+      if (img.complete) return;
+      try {
+        await img.decode?.();
+      } catch {
+        // Ignore issues with decoding, this is just to catch race conditions
+      }
+    }),
+  );
+}
+
+function installBeforeUnloadGuard(): () => void {
+  const maybeGlobal = globalThis as Record<string, unknown>;
+  const maybeWindow = maybeGlobal["window"];
+  const eventTarget = isEventTargetWithListeners(maybeWindow)
+    ? maybeWindow
+    : isEventTargetWithListeners(globalThis)
+      ? globalThis
+      : null;
+  if (!eventTarget) return () => undefined;
+
+  const handleBeforeUnload = (event: Event) => {
+    const beforeUnloadEvent = event as {
+      preventDefault?: () => void;
+      returnValue?: unknown;
+    };
+    beforeUnloadEvent.preventDefault?.();
+    beforeUnloadEvent.returnValue = "";
+  };
+  eventTarget.addEventListener("beforeunload", handleBeforeUnload);
+  return () => eventTarget.removeEventListener("beforeunload", handleBeforeUnload);
 }
 
 export function CustomSortMode({
@@ -77,6 +168,11 @@ export function CustomSortMode({
     down: number | null;
   }>({ left: null, right: null, up: null, down: null });
   const gamepadArmedRef = useRef(false);
+  const saveInFlightRef = useRef(false);
+
+  useEffect(() => {
+    return installBeforeUnloadGuard();
+  }, []);
 
   const appById = useMemo(() => {
     const m = new Map<string, Switch.Application>();
@@ -93,6 +189,23 @@ export function CustomSortMode({
   );
 
   const appCount = orderedApps.length;
+
+  const finalizeSave = () => {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
+
+    void (async () => {
+      try {
+        onDone([...order]);
+        // Let Root/layout mount before waiting on resource completion.
+        await waitForPostLayoutFrames();
+        await waitForDocumentImages();
+        await waitForNextFrame();
+      } finally {
+        saveInFlightRef.current = false;
+      }
+    })();
+  };
 
   useEffect(() => {
     let rafId: number;
@@ -263,7 +376,7 @@ export function CustomSortMode({
 
       if (isPlus && !btnState.plusPressed) {
         setBtnState((prev) => ({ ...prev, plusPressed: true }));
-        onDone([...order]);
+        finalizeSave();
       } else if (!isPlus && btnState.plusPressed) {
         setBtnState((prev) => ({ ...prev, plusPressed: false }));
       }

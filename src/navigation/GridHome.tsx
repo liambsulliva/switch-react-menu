@@ -128,17 +128,31 @@ export function GridHome() {
 
   const itemsPerPage =
     apps.length > 0 ? calculateItemsPerPage(apps[0].width) : 0;
-  const totalPages = Math.ceil(apps.length / itemsPerPage);
+  const totalPages =
+    itemsPerPage > 0 ? Math.ceil(apps.length / itemsPerPage) : 0;
   const paginatedApps = apps.slice(
     currentPage * itemsPerPage,
     (currentPage + 1) * itemsPerPage,
   );
 
+  useEffect(() => {
+    if (totalPages === 0) {
+      if (currentPage !== 0) setCurrentPage(0);
+      if (selectedIndex !== 0) setSelectedIndex(0);
+      return;
+    }
+    if (currentPage >= totalPages) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [totalPages, currentPage, selectedIndex]);
+
   const handlePrevPage = () => {
+    if (totalPages <= 1) return;
     setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1));
   };
 
   const handleNextPage = () => {
+    if (totalPages <= 1) return;
     setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
   };
 
@@ -153,6 +167,9 @@ export function GridHome() {
     const placed = { ...app, x: rowX };
     rowX += app.width + gap;
     return placed;
+  });
+  const visibleAppSlots = Array.from({ length: visibleApps.length }, (_, index) => {
+    return visibleApps[index];
   });
 
   useGamepadNavigation({
@@ -170,8 +187,10 @@ export function GridHome() {
   });
 
   const handleAppSelect = (index: number) => {
+    const selectedApp = paginatedApps[index];
+    if (!selectedApp) return;
     if (index === selectedIndex) {
-      const app = paginatedApps[selectedIndex].app;
+      const app = selectedApp.app;
       recordLastPlayed(app);
       app.launch();
     } else {
@@ -256,9 +275,9 @@ export function GridHome() {
         />
       )}
 
-      {visibleApps.map((displayedApp, index) => (
+      {visibleAppSlots.map((displayedApp, index) => (
         <AppIcon
-          key={displayedApp.app.id.toString()}
+          key={`app-slot-${index}`}
           displayedApp={displayedApp}
           truncate={truncate}
           isSelected={focusArea === "apps" && index === selectedIndex}
