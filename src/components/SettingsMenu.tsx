@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 
@@ -16,6 +16,11 @@ interface ButtonState {
   downPressed: boolean;
   aPressed: boolean;
   bPressed: boolean;
+}
+
+interface HoldRepeatState {
+  up: number | null;
+  down: number | null;
 }
 
 const ITEM_HEIGHT = 72;
@@ -44,6 +49,8 @@ const TRACK_H = 28;
 const KNOB_SIZE = 22;
 const KNOB_PAD = 3;
 const TRACK_X = PADDING_X + panelWidth - TRACK_W - 48;
+const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
+const HOLD_REPEAT_INTERVAL_MS = 110;
 
 function ensureVisible(index: number, offset: number): number {
   if (index < offset) return index;
@@ -61,11 +68,35 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
     aPressed: false,
     bPressed: false,
   });
+  const holdRepeatRef = useRef<HoldRepeatState>({ up: null, down: null });
 
   useEffect(() => {
     let rafId: number;
 
+    const canRepeat = (startedAt: number | null, now: number): boolean => {
+      if (startedAt === null) {
+        return true;
+      }
+      const heldFor = now - startedAt;
+      if (heldFor < HOLD_REPEAT_INITIAL_DELAY_MS) {
+        return false;
+      }
+      return heldFor % HOLD_REPEAT_INTERVAL_MS < 16;
+    };
+
+    const moveSelection = (direction: "up" | "down") => {
+      setSelectedIndex((prev) => {
+        const next =
+          direction === "up"
+            ? Math.max(0, prev - 1)
+            : Math.min(items.length - 1, prev + 1);
+        setScrollOffset((off) => ensureVisible(next, off));
+        return next;
+      });
+    };
+
     const loop = () => {
+      const now = Date.now();
       const gamepad = navigator.getGamepads()[0];
       if (!gamepad) {
         rafId = requestAnimationFrame(loop);
@@ -83,24 +114,32 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
 
       if (isUp && !buttonState.upPressed) {
         setButtonState((prev) => ({ ...prev, upPressed: true }));
-        setSelectedIndex((prev) => {
-          const next = Math.max(0, prev - 1);
-          setScrollOffset((off) => ensureVisible(next, off));
-          return next;
-        });
+        holdRepeatRef.current.up = now;
+        moveSelection("up");
+      } else if (
+        isUp &&
+        buttonState.upPressed &&
+        canRepeat(holdRepeatRef.current.up, now)
+      ) {
+        moveSelection("up");
       } else if (!isUp && buttonState.upPressed) {
         setButtonState((prev) => ({ ...prev, upPressed: false }));
+        holdRepeatRef.current.up = null;
       }
 
       if (isDown && !buttonState.downPressed) {
         setButtonState((prev) => ({ ...prev, downPressed: true }));
-        setSelectedIndex((prev) => {
-          const next = Math.min(items.length - 1, prev + 1);
-          setScrollOffset((off) => ensureVisible(next, off));
-          return next;
-        });
+        holdRepeatRef.current.down = now;
+        moveSelection("down");
+      } else if (
+        isDown &&
+        buttonState.downPressed &&
+        canRepeat(holdRepeatRef.current.down, now)
+      ) {
+        moveSelection("down");
       } else if (!isDown && buttonState.downPressed) {
         setButtonState((prev) => ({ ...prev, downPressed: false }));
+        holdRepeatRef.current.down = null;
       }
 
       if (isA && !buttonState.aPressed) {
