@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Rect, Text } from "react-tela";
+import { Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
 import { COLORS } from "../lib/colors";
-import { List } from "./List";
-import type { ListElementModel } from "./ListElement";
+import { List } from "../components/List";
+import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
+import type { ListElementModel } from "../components/ListElement";
 import {
   recordLastPlayed,
   useLastPlayedApplicationId,
@@ -15,12 +16,10 @@ import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 
 const ROW_HEIGHT = 84;
-const LIST_TOP = 130;
-const PADDING_X = 64;
-const FOOTER_HEIGHT = 80;
-const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
+const listHeight =
+  screen.height - HEADER_LAYOUT.contentTop - HEADER_LAYOUT.footerHeight;
 const visibleRowCount = Math.floor(listHeight / ROW_HEIGHT);
-const panelWidth = screen.width - PADDING_X * 2;
+const panelWidth = screen.width - HEADER_LAYOUT.paddingX * 2;
 
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
@@ -114,6 +113,34 @@ export function CompactHome() {
   }, [apps, settings.alphabeticalSort, customOrder]);
 
   const appCount = sortedApps.length;
+
+  const listItems = useMemo<ListElementModel[]>(
+    () =>
+      sortedApps.map((app, index) => {
+        const isSelected = focusArea === "apps" && index === selectedIndex;
+        const isLastPlayed =
+          settings.showLastPlayed &&
+          lastPlayedId !== null &&
+          app.id.toString() === lastPlayedId;
+        return {
+          id: app.id.toString(),
+          label: settings.showAppTitles ? truncate(app.name, 38) : "",
+          variant: "game" as const,
+          gameIconSrc: app.icon ? getIconUrl(app, app.icon) : undefined,
+          gameVersion: `v${app.version}`,
+          gameEyebrow: isLastPlayed ? "Last Played!" : undefined,
+          valueColorOverride: isSelected ? COLORS.gray[0] : COLORS.gray[200],
+        };
+      }),
+    [
+      sortedApps,
+      focusArea,
+      selectedIndex,
+      settings.showLastPlayed,
+      settings.showAppTitles,
+      lastPlayedId,
+    ],
+  );
 
   useEffect(() => {
     if (appCount === 0) {
@@ -289,34 +316,6 @@ export function CompactHome() {
     }
   }, [showSettings, showCustomSort]);
 
-  const listItems = useMemo<ListElementModel[]>(
-    () =>
-      sortedApps.map((app, index) => {
-        const isSelected = focusArea === "apps" && index === selectedIndex;
-        const isLastPlayed =
-          settings.showLastPlayed &&
-          lastPlayedId !== null &&
-          app.id.toString() === lastPlayedId;
-        return {
-          id: app.id.toString(),
-          label: settings.showAppTitles ? truncate(app.name, 38) : "",
-          variant: "game" as const,
-          gameIconSrc: app.icon ? getIconUrl(app, app.icon) : undefined,
-          gameVersion: `v${app.version}`,
-          gameEyebrow: isLastPlayed ? "Last Played!" : undefined,
-          valueColorOverride: isSelected ? COLORS.gray[0] : COLORS.gray[200],
-        };
-      }),
-    [
-      sortedApps,
-      focusArea,
-      selectedIndex,
-      settings.showLastPlayed,
-      settings.showAppTitles,
-      lastPlayedId,
-    ],
-  );
-
   if (showSettings) {
     return (
       <SettingsMenu
@@ -345,62 +344,22 @@ export function CompactHome() {
   }
 
   return (
-    <>
-      {/* Background */}
-      <Rect
-        x={0}
-        y={0}
-        width={screen.width}
-        height={screen.height}
-        fill="#0f0f0f"
-      />
-
-      {/* Header: title */}
-      <Text
-        x={PADDING_X}
-        y={80}
-        fill="white"
-        fontSize={36}
-        fontFamily="SourceSansPro-Bold"
-        textBaseline="middle"
-      >
-        All Applications
-      </Text>
-      <Text
-        x={screen.width - PADDING_X - 60}
-        y={80}
-        fill={focusArea === "settings" ? "#fff" : "#666"}
-        fontSize={26}
-        fontFamily={
-          focusArea === "settings"
-            ? "SourceSansPro-Bold"
-            : "SourceSansPro-Regular"
-        }
-        textAlign="center"
-        textBaseline="middle"
-      >
-        Settings
-      </Text>
-      <Rect
-        x={screen.width - PADDING_X - 120}
-        y={50}
-        width={120}
-        height={60}
-        fill="transparent"
-        onTouchStart={() => setShowSettings(true)}
-      />
-
-      {/* Header divider */}
-      <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
-
+    <HeaderLayout
+      title="All Applications"
+      rightActionLabel="Settings"
+      rightActionActive={focusArea === "settings"}
+      onRightActionTouchStart={() => setShowSettings(true)}
+      footerHint="A  Launch      +  Settings"
+    >
       <List
-        x={PADDING_X}
-        top={LIST_TOP}
+        x={HEADER_LAYOUT.paddingX}
+        top={HEADER_LAYOUT.contentTop}
         width={panelWidth}
         rowHeight={ROW_HEIGHT}
         visibleCount={visibleRowCount}
         items={listItems}
         selectedIndex={selectedIndex}
+        isFocused={focusArea === "apps"}
         scrollOffset={scrollOffset}
         onItemTouchStart={(absoluteIndex) => {
           const app = sortedApps[absoluteIndex];
@@ -416,12 +375,11 @@ export function CompactHome() {
         }}
       />
 
-      {/* Empty-state message */}
       {appCount === 0 && (
         <Text
           x={screen.width / 2}
-          y={LIST_TOP + listHeight / 2}
-          fill="#555"
+          y={HEADER_LAYOUT.contentTop + listHeight / 2}
+          fill={COLORS.gray[600]}
           fontSize={26}
           fontFamily="SourceSansPro-Regular"
           textAlign="center"
@@ -430,27 +388,6 @@ export function CompactHome() {
           No applications installed.
         </Text>
       )}
-
-      {/* Footer divider */}
-      <Rect
-        x={PADDING_X}
-        y={screen.height - FOOTER_HEIGHT}
-        width={panelWidth}
-        height={1}
-        fill="#222"
-      />
-
-      {/* Footer hints */}
-      <Text
-        x={PADDING_X}
-        y={screen.height - FOOTER_HEIGHT / 2}
-        fill="#555"
-        fontSize={22}
-        fontFamily="SourceSansPro-Regular"
-        textBaseline="middle"
-      >
-        {"A  Launch      +  Settings"}
-      </Text>
-    </>
+    </HeaderLayout>
   );
 }

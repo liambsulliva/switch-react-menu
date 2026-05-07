@@ -11,6 +11,7 @@ interface ListProps {
   visibleCount: number;
   items: ListElementModel[];
   selectedIndex: number;
+  isFocused?: boolean;
   scrollOffset: number;
   onItemTouchStart?: (index: number) => void;
 }
@@ -23,6 +24,7 @@ export function List({
   visibleCount,
   items,
   selectedIndex,
+  isFocused = true,
   scrollOffset,
   onItemTouchStart,
 }: ListProps) {
@@ -51,7 +53,7 @@ export function List({
             y={rowY}
             width={width}
             height={rowHeight}
-            isSelected={absoluteIndex === selectedIndex}
+            isSelected={isFocused && absoluteIndex === selectedIndex}
             onTouchStart={() => onItemTouchStart?.(absoluteIndex)}
             {...item}
           />

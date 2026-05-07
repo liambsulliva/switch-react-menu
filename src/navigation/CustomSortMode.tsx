@@ -3,8 +3,8 @@ import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { COLORS } from "../lib/colors";
-import { List } from "./List";
-import type { ListElementModel } from "./ListElement";
+import { List } from "../components/List";
+import type { ListElementModel } from "../components/ListElement";
 
 interface CustomSortModeProps {
   apps: Switch.Application[];
@@ -167,7 +167,6 @@ export function CustomSortMode({
         return;
       }
 
-      // Left / Right btn
       if (!compact) {
         if (isLeft && !btnState.leftPressed) {
           setBtnState((prev) => ({ ...prev, leftPressed: true }));
@@ -200,7 +199,6 @@ export function CustomSortMode({
         }
       }
 
-      // Up / Down btn
       if (compact) {
         if (isUp && !btnState.upPressed) {
           setBtnState((prev) => ({ ...prev, upPressed: true }));
@@ -233,7 +231,6 @@ export function CustomSortMode({
         }
       }
 
-      // A btn
       if (isA && !btnState.aPressed) {
         setBtnState((prev) => ({ ...prev, aPressed: true }));
         if (!isHolding) {
@@ -246,7 +243,6 @@ export function CustomSortMode({
         setBtnState((prev) => ({ ...prev, aPressed: false }));
       }
 
-      // B btn
       if (isB && !btnState.bPressed) {
         setBtnState((prev) => ({ ...prev, bPressed: true }));
         if (isHolding) {
@@ -265,7 +261,6 @@ export function CustomSortMode({
         setBtnState((prev) => ({ ...prev, bPressed: false }));
       }
 
-      // + btn
       if (isPlus && !btnState.plusPressed) {
         setBtnState((prev) => ({ ...prev, plusPressed: true }));
         onDone([...order]);
@@ -311,7 +306,6 @@ export function CustomSortMode({
 
     return (
       <>
-        {/* Background */}
         <Rect
           x={0}
           y={0}
@@ -320,7 +314,6 @@ export function CustomSortMode({
           fill={COLORS.background}
         />
 
-        {/* Header title */}
         <Text
           x={PADDING_X}
           y={80}
@@ -332,7 +325,6 @@ export function CustomSortMode({
           Custom Sort
         </Text>
 
-        {/* Header hint */}
         <Text
           x={screen.width - PADDING_X - 60}
           y={80}
@@ -345,7 +337,6 @@ export function CustomSortMode({
           + Save
         </Text>
 
-        {/* Header divider */}
         <Rect
           x={PADDING_X}
           y={112}
@@ -354,7 +345,6 @@ export function CustomSortMode({
           fill={COLORS.gray[700]}
         />
 
-        {/* Icons */}
         {orderedApps.map((app, i) => {
           const baseX = i * (iconW + GRID_GAP);
           const renderX = gridViewportX + baseX - scrollX;
@@ -370,7 +360,6 @@ export function CustomSortMode({
 
           return (
             <React.Fragment key={app.id.toString()}>
-              {/* Held glow */}
               {isHeld && (
                 <Rect
                   x={renderX - 6}
@@ -381,7 +370,6 @@ export function CustomSortMode({
                 />
               )}
 
-              {/* Selection / held border */}
               {isSelected && (
                 <Rect
                   x={renderX - 5}
@@ -427,7 +415,6 @@ export function CustomSortMode({
           );
         })}
 
-        {/* Footer divider */}
         <Rect
           x={PADDING_X}
           y={screen.height - FOOTER_HEIGHT}
@@ -436,7 +423,6 @@ export function CustomSortMode({
           fill={COLORS.gray[700]}
         />
 
-        {/* Footer legend */}
         <Text
           x={PADDING_X}
           y={screen.height - FOOTER_HEIGHT / 2}
@@ -478,7 +464,6 @@ export function CustomSortMode({
 
   return (
     <>
-      {/* Background */}
       <Rect
         x={0}
         y={0}
@@ -487,7 +472,6 @@ export function CustomSortMode({
         fill={COLORS.background}
       />
 
-      {/* Header title */}
       <Text
         x={PADDING_X}
         y={80}
@@ -499,7 +483,6 @@ export function CustomSortMode({
         Custom Sort
       </Text>
 
-      {/* Header hint */}
       <Text
         x={screen.width - PADDING_X - 60}
         y={80}
@@ -512,7 +495,6 @@ export function CustomSortMode({
         + Save
       </Text>
 
-      {/* Header divider */}
       <Rect
         x={PADDING_X}
         y={112}
@@ -532,7 +514,6 @@ export function CustomSortMode({
         scrollOffset={scrollOffset}
       />
 
-      {/* Footer divider */}
       <Rect
         x={PADDING_X}
         y={screen.height - FOOTER_HEIGHT}
@@ -541,7 +522,6 @@ export function CustomSortMode({
         fill={COLORS.gray[700]}
       />
 
-      {/* Footer legend */}
       <Text
         x={PADDING_X}
         y={screen.height - FOOTER_HEIGHT / 2}

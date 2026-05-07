@@ -7,9 +7,9 @@ import {
   toggleSetting,
   useSettings,
 } from "../settings/settingsStore";
-import { COLORS } from "../lib/colors";
-import { List } from "./List";
-import type { ListElementModel } from "./ListElement";
+import { List } from "../components/List";
+import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
+import type { ListElementModel } from "../components/ListElement";
 
 interface SettingsMenuProps {
   onClose: () => void;
@@ -29,13 +29,10 @@ interface HoldRepeatState {
 }
 
 const ITEM_HEIGHT = 72;
-const LIST_TOP = 130;
-const PADDING_X = 64;
-const FOOTER_HEIGHT = 80;
-
-const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
+const listHeight =
+  screen.height - HEADER_LAYOUT.contentTop - HEADER_LAYOUT.footerHeight;
 const visibleCount = Math.floor(listHeight / ITEM_HEIGHT);
-const panelWidth = screen.width - PADDING_X * 2;
+const panelWidth = screen.width - HEADER_LAYOUT.paddingX * 2;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
 
@@ -105,7 +102,6 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
     if (!selectableIndexes.includes(current)) {
       return selectableIndexes[0];
     }
-
     let candidate = current;
     while (true) {
       candidate += direction === "up" ? -1 : 1;
@@ -127,13 +123,9 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
     let rafId: number;
 
     const canRepeat = (startedAt: number | null, now: number): boolean => {
-      if (startedAt === null) {
-        return true;
-      }
+      if (startedAt === null) return true;
       const heldFor = now - startedAt;
-      if (heldFor < HOLD_REPEAT_INITIAL_DELAY_MS) {
-        return false;
-      }
+      if (heldFor < HOLD_REPEAT_INITIAL_DELAY_MS) return false;
       return heldFor % HOLD_REPEAT_INTERVAL_MS < 16;
     };
 
@@ -229,56 +221,15 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
   };
 
   return (
-    <>
-      {/* Background */}
-      <Rect
-        x={0}
-        y={0}
-        width={screen.width}
-        height={screen.height}
-        fill="#0f0f0f"
-      />
-
-      {/* Header: title */}
-      <Text
-        x={PADDING_X}
-        y={80}
-        fill="white"
-        fontSize={36}
-        fontFamily="SourceSansPro-Bold"
-        textBaseline="middle"
-      >
-        Settings
-      </Text>
-
-      {/* Header: back hint — text centered inside its touch target */}
-      <Text
-        x={screen.width - PADDING_X - 60}
-        y={80}
-        fill="#666"
-        fontSize={24}
-        fontFamily="SourceSansPro-Regular"
-        textAlign="center"
-        textBaseline="middle"
-      >
-        B Back
-      </Text>
-      {/* Back button hitbox — centered on the text above */}
-      <Rect
-        x={screen.width - PADDING_X - 120}
-        y={50}
-        width={120}
-        height={60}
-        fill="transparent"
-        onTouchStart={onClose}
-      />
-
-      {/* Header divider */}
-      <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
-
+    <HeaderLayout
+      title="Settings"
+      rightActionLabel="B Back"
+      onRightActionTouchStart={onClose}
+      footerHint="A  Select      B  Back"
+    >
       <List
-        x={PADDING_X}
-        top={LIST_TOP}
+        x={HEADER_LAYOUT.paddingX}
+        top={HEADER_LAYOUT.contentTop}
         width={panelWidth}
         rowHeight={ITEM_HEIGHT}
         visibleCount={visibleCount}
@@ -287,27 +238,6 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
         scrollOffset={scrollOffset}
         onItemTouchStart={toggleItem}
       />
-
-      {/* Footer divider */}
-      <Rect
-        x={PADDING_X}
-        y={screen.height - FOOTER_HEIGHT}
-        width={panelWidth}
-        height={1}
-        fill={COLORS.gray[700]}
-      />
-
-      {/* Footer hints */}
-      <Text
-        x={PADDING_X}
-        y={screen.height - FOOTER_HEIGHT / 2}
-        fill={COLORS.gray[400]}
-        fontSize={22}
-        fontFamily="SourceSansPro-Regular"
-        textBaseline="middle"
-      >
-        {"A  Select      B  Back"}
-      </Text>
-    </>
+    </HeaderLayout>
   );
 }
