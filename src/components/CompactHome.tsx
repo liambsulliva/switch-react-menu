@@ -2,12 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
+import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
 import {
   recordLastPlayed,
   useLastPlayedApplicationId,
 } from "../settings/lastPlayedStore";
-import { useSettings } from "../settings/settingsStore";
+import { setSettings, useSettings } from "../settings/settingsStore";
+import {
+  setCustomOrder,
+  useCustomOrder,
+} from "../settings/customSortStore";
 
 const ROW_HEIGHT = 84;
 const LIST_TOP = 130;
@@ -39,7 +44,6 @@ interface HoldRepeatState {
   down: number | null;
 }
 
-// Same per-id cache strategy as `AppIcon`: avoid leaking a fresh blob URL on every render.
 const iconUrlCache = new Map<string, string>();
 
 function getIconUrl(app: { id: bigint }, icon: ArrayBuffer): string {
@@ -60,12 +64,14 @@ function ensureVisible(index: number, offset: number): number {
 
 export function CompactHome() {
   const settings = useSettings();
+  const customOrder = useCustomOrder();
   const lastPlayedId = useLastPlayedApplicationId();
   const [apps, setApps] = useState<Switch.Application[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [focusArea, setFocusArea] = useState<ListFocusArea>("apps");
   const [showSettings, setShowSettings] = useState(false);
+  const [showCustomSort, setShowCustomSort] = useState(false);
 
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
@@ -83,16 +89,35 @@ export function CompactHome() {
     setApps(loaded);
   }, []);
 
+  useEffect(() => {
+    if (!settings.alphabeticalSort) return;
+    const alphabeticalOrder = [...apps]
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      )
+      .map((app) => app.id.toString());
+    setCustomOrder(alphabeticalOrder);
+  }, [settings.alphabeticalSort, apps]);
+
   const sortedApps = useMemo(() => {
-    if (!settings.alphabeticalSort) return apps;
-    return [...apps].sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-    );
-  }, [apps, settings.alphabeticalSort]);
+    if (settings.alphabeticalSort) {
+      return [...apps].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      );
+    }
+    if (customOrder.length > 0) {
+      const orderMap = new Map(customOrder.map((id, i) => [id, i]));
+      return [...apps].sort((a, b) => {
+        const ai = orderMap.get(a.id.toString()) ?? Infinity;
+        const bi = orderMap.get(b.id.toString()) ?? Infinity;
+        return ai - bi;
+      });
+    }
+    return apps;
+  }, [apps, settings.alphabeticalSort, customOrder]);
 
   const appCount = sortedApps.length;
 
-  // Keep selection within the bounds of the (possibly shrinking) app list.
   useEffect(() => {
     if (appCount === 0) {
       if (selectedIndex !== 0) setSelectedIndex(0);
@@ -107,7 +132,7 @@ export function CompactHome() {
   }, [appCount, selectedIndex, scrollOffset]);
 
   useEffect(() => {
-    if (showSettings) return;
+    if (showSettings || showCustomSort) return;
     let rafId: number;
 
     const canRepeat = (startedAt: number | null, now: number): boolean => {
@@ -173,7 +198,6 @@ export function CompactHome() {
         setButtonState((prev) => ({ ...prev, upPressed: true }));
         holdRepeatRef.current.up = now;
         if (focusArea === "settings") {
-          // already at the top... should stay focused on Settings
         } else {
           if (selectedIndex === 0) {
             setFocusArea("settings");
@@ -252,16 +276,39 @@ export function CompactHome() {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, sortedApps, selectedIndex, focusArea, appCount, showSettings]);
+  }, [buttonState, sortedApps, selectedIndex, focusArea, appCount, showSettings, showCustomSort]);
 
   useEffect(() => {
-    if (showSettings) {
+    if (showSettings || showCustomSort) {
       gamepadArmedRef.current = false;
     }
-  }, [showSettings]);
+  }, [showSettings, showCustomSort]);
 
   if (showSettings) {
-    return <SettingsMenu onClose={() => setShowSettings(false)} />;
+    return (
+      <SettingsMenu
+        onClose={() => setShowSettings(false)}
+        onCustomSort={() => {
+          setSettings({ alphabeticalSort: false });
+          setShowSettings(false);
+          setShowCustomSort(true);
+        }}
+      />
+    );
+  }
+
+  if (showCustomSort) {
+    return (
+      <CustomSortMode
+        apps={sortedApps}
+        compact={true}
+        onDone={(newOrder) => {
+          setCustomOrder(newOrder);
+          setShowCustomSort(false);
+        }}
+        onCancel={() => setShowCustomSort(false)}
+      />
+    );
   }
 
   const showScrollbar = appCount > visibleRowCount;
@@ -307,8 +354,6 @@ export function CompactHome() {
       >
         All Applications
       </Text>
-
-      {/* Header: settings target — same hit-target shape as the home page */}
       <Text
         x={screen.width - PADDING_X - 60}
         y={80}

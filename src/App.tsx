@@ -4,6 +4,7 @@ import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
 import { AppIcon } from "./components/AppIcon";
 import { CompactHome } from "./components/CompactHome";
+import { CustomSortMode } from "./components/CustomSortMode";
 import { Navigation } from "./components/Navigation";
 import { SettingsMenu } from "./components/SettingsMenu";
 import { getCornerIconPng, getSettingsCogPng } from "./lib/iconPng";
@@ -12,7 +13,11 @@ import {
   recordLastPlayed,
   useLastPlayedApplicationId,
 } from "./settings/lastPlayedStore";
-import { useSettings } from "./settings/settingsStore";
+import { setSettings, useSettings } from "./settings/settingsStore";
+import {
+  setCustomOrder,
+  useCustomOrder,
+} from "./settings/customSortStore";
 
 export function App() {
   const settings = useSettings();
@@ -26,6 +31,7 @@ export function App() {
 
 function GridHome() {
   const settings = useSettings();
+  const customOrder = useCustomOrder();
   const lastPlayedId = useLastPlayedApplicationId();
   const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -35,6 +41,7 @@ function GridHome() {
   >("apps");
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showCustomSort, setShowCustomSort] = useState(false);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
     string | null
@@ -45,13 +52,23 @@ function GridHome() {
   const gap = 48;
 
   const apps = useMemo(() => {
-    if (!settings.alphabeticalSort) {
-      return rawApps;
+    if (settings.alphabeticalSort) {
+      return [...rawApps].sort((a, b) =>
+        a.app.name.localeCompare(b.app.name, undefined, {
+          sensitivity: "base",
+        }),
+      );
     }
-    return [...rawApps].sort((a, b) =>
-      a.app.name.localeCompare(b.app.name, undefined, { sensitivity: "base" }),
-    );
-  }, [rawApps, settings.alphabeticalSort]);
+    if (customOrder.length > 0) {
+      const orderMap = new Map(customOrder.map((id, i) => [id, i]));
+      return [...rawApps].sort((a, b) => {
+        const ai = orderMap.get(a.app.id.toString()) ?? Infinity;
+        const bi = orderMap.get(b.app.id.toString()) ?? Infinity;
+        return ai - bi;
+      });
+    }
+    return rawApps;
+  }, [rawApps, settings.alphabeticalSort, customOrder]);
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
     return Math.floor((screen.width - gap) / (firstItemWidth + gap));
@@ -110,6 +127,18 @@ function GridHome() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!settings.alphabeticalSort) return;
+    const alphabeticalOrder = [...rawApps]
+      .sort((a, b) =>
+        a.app.name.localeCompare(b.app.name, undefined, {
+          sensitivity: "base",
+        }),
+      )
+      .map((app) => app.app.id.toString());
+    setCustomOrder(alphabeticalOrder);
+  }, [settings.alphabeticalSort, rawApps]);
+
   const itemsPerPage =
     apps.length > 0 ? calculateItemsPerPage(apps[0].width) : 0;
   const totalPages = Math.ceil(apps.length / itemsPerPage);
@@ -149,7 +178,7 @@ function GridHome() {
     setFocusArea,
     navButtonIndex: selectedNavButton,
     setNavButtonIndex: setSelectedNavButton,
-    isActive: !showSettings,
+    isActive: !showSettings && !showCustomSort,
     onOpenSettings: () => setShowSettings(true),
   });
 
@@ -164,7 +193,30 @@ function GridHome() {
   };
 
   if (showSettings) {
-    return <SettingsMenu onClose={() => setShowSettings(false)} />;
+    return (
+      <SettingsMenu
+        onClose={() => setShowSettings(false)}
+        onCustomSort={() => {
+          setSettings({ alphabeticalSort: false });
+          setShowSettings(false);
+          setShowCustomSort(true);
+        }}
+      />
+    );
+  }
+
+  if (showCustomSort) {
+    return (
+      <CustomSortMode
+        apps={apps.map((a) => a.app)}
+        compact={false}
+        onDone={(newOrder) => {
+          setCustomOrder(newOrder);
+          setShowCustomSort(false);
+        }}
+        onCancel={() => setShowCustomSort(false)}
+      />
+    );
   }
 
   // Settings button layout constants

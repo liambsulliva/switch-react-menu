@@ -10,6 +10,7 @@ import {
 
 interface SettingsMenuProps {
   onClose: () => void;
+  onCustomSort?: () => void;
 }
 
 interface ButtonState {
@@ -33,6 +34,8 @@ const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
 const visibleCount = Math.floor(listHeight / ITEM_HEIGHT);
 const panelWidth = screen.width - PADDING_X * 2;
 const settingCount = SETTING_ORDER.length;
+const totalItemCount = settingCount + 1;
+const CUSTOM_SORT_INDEX = settingCount;
 
 const TRACK_W = 56;
 const TRACK_H = 28;
@@ -48,7 +51,7 @@ function ensureVisible(index: number, offset: number): number {
   return offset;
 }
 
-export function SettingsMenu({ onClose }: SettingsMenuProps) {
+export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
   const settings = useSettings();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
@@ -80,7 +83,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
         const next =
           direction === "up"
             ? Math.max(0, prev - 1)
-            : Math.min(settingCount - 1, prev + 1);
+            : Math.min(totalItemCount - 1, prev + 1);
         setScrollOffset((off) => ensureVisible(next, off));
         return next;
       });
@@ -144,7 +147,11 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
 
       if (isA && !buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: true }));
-        toggleSetting(SETTING_ORDER[selectedIndex]);
+        if (selectedIndex === CUSTOM_SORT_INDEX) {
+          onCustomSort?.();
+        } else {
+          toggleSetting(SETTING_ORDER[selectedIndex]);
+        }
       } else if (!isA && buttonState.aPressed) {
         setButtonState((prev) => ({ ...prev, aPressed: false }));
       }
@@ -164,18 +171,20 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
   }, [buttonState, selectedIndex, onClose]);
 
   const toggleItem = (index: number) => {
-    toggleSetting(SETTING_ORDER[index]);
     setSelectedIndex(index);
+    if (index < settingCount) {
+      toggleSetting(SETTING_ORDER[index]);
+    }
   };
 
   const scrollbarTrackHeight = listHeight;
   const scrollbarThumbHeight = Math.max(
     24,
-    (visibleCount / settingCount) * scrollbarTrackHeight,
+    (visibleCount / totalItemCount) * scrollbarTrackHeight,
   );
   const scrollbarThumbY =
     LIST_TOP +
-    (scrollOffset / (settingCount - visibleCount)) *
+    (scrollOffset / Math.max(1, totalItemCount - visibleCount)) *
       (scrollbarTrackHeight - scrollbarThumbHeight);
 
   return (
@@ -308,8 +317,69 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
         );
       })}
 
+      {/* Custom Sort action row */}
+      {(() => {
+        const absoluteIndex = CUSTOM_SORT_INDEX;
+        const visiblePosition = absoluteIndex - scrollOffset;
+        if (visiblePosition < 0 || visiblePosition >= visibleCount) return null;
+        const isSelected = absoluteIndex === selectedIndex;
+        const rowY = LIST_TOP + visiblePosition * ITEM_HEIGHT;
+        const arrowX = TRACK_X + TRACK_W / 2;
+        return (
+          <React.Fragment key="custom-sort">
+            {isSelected && (
+              <Rect
+                x={PADDING_X}
+                y={rowY}
+                width={panelWidth}
+                height={ITEM_HEIGHT}
+                fill="#1a1a1a"
+              />
+            )}
+            <Rect
+              x={PADDING_X}
+              y={rowY + ITEM_HEIGHT - 1}
+              width={panelWidth}
+              height={1}
+              fill="#1e1e1e"
+            />
+            <Rect
+              x={PADDING_X}
+              y={rowY}
+              width={panelWidth}
+              height={ITEM_HEIGHT}
+              fill="transparent"
+              onTouchStart={() => onCustomSort?.()}
+            />
+            <Text
+              x={PADDING_X + 24}
+              y={rowY + ITEM_HEIGHT / 2}
+              fill={isSelected ? "white" : "#999"}
+              fontSize={26}
+              fontFamily={
+                isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
+              }
+              textBaseline="middle"
+            >
+              Custom Sort
+            </Text>
+            <Text
+              x={arrowX}
+              y={rowY + ITEM_HEIGHT / 2}
+              fill={isSelected ? "#4a9eff" : "#555"}
+              fontSize={28}
+              fontFamily="SourceSansPro-Bold"
+              textAlign="center"
+              textBaseline="middle"
+            >
+              {"›"}
+            </Text>
+          </React.Fragment>
+        );
+      })()}
+
       {/* Scrollbar track */}
-      {settingCount > visibleCount && (
+      {totalItemCount > visibleCount && (
         <>
           <Rect
             x={screen.width - PADDING_X + 8}
@@ -346,7 +416,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
         fontFamily="SourceSansPro-Regular"
         textBaseline="middle"
       >
-        {"A  Toggle      B  Back"}
+        {"A  Select      B  Back"}
       </Text>
     </>
   );
