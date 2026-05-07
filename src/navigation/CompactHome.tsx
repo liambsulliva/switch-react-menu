@@ -349,7 +349,7 @@ export function CompactHome() {
       rightActionLabel="Settings"
       rightActionActive={focusArea === "settings"}
       onRightActionTouchStart={() => setShowSettings(true)}
-      footerHint="A  Launch      +  Settings"
+      footerHint="A  Launch"
     >
       <List
         x={HEADER_LAYOUT.paddingX}
