@@ -3,7 +3,6 @@ import { useSyncExternalStore } from "react";
 const STORAGE_KEY = "switch-react-menu-settings";
 
 export type AppSettings = {
-  autoLaunchGame: boolean;
   showAppTitles: boolean;
   enableHaptics: boolean;
   showPageNumbers: boolean;
@@ -12,10 +11,10 @@ export type AppSettings = {
   showLastPlayed: boolean;
   enableSounds: boolean;
   screensaver: boolean;
+  customSort: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  autoLaunchGame: false,
   showAppTitles: true,
   enableHaptics: true,
   showPageNumbers: true,
@@ -24,31 +23,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showLastPlayed: false,
   enableSounds: false,
   screensaver: true,
-};
-
-/** Row order in Settings — index matches menu row. */
-export const SETTING_ORDER: (keyof AppSettings)[] = [
-  "autoLaunchGame",
-  "showAppTitles",
-  "enableHaptics",
-  "showPageNumbers",
-  "alphabeticalSort",
-  "compactView",
-  "showLastPlayed",
-  "enableSounds",
-  "screensaver",
-];
-
-export const SETTING_LABELS: Record<keyof AppSettings, string> = {
-  autoLaunchGame: "Auto-Launch Game",
-  showAppTitles: "Show App Titles",
-  enableHaptics: "Enable Haptics",
-  showPageNumbers: "Show Page Numbers",
-  alphabeticalSort: "Alphabetical Sort",
-  compactView: "Compact View",
-  showLastPlayed: "Show Last Played",
-  enableSounds: "Enable Sounds",
-  screensaver: "Screensaver",
+  customSort: false,
 };
 
 function storage(): Storage | null {

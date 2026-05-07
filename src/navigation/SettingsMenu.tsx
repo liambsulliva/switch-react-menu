@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import {
-  SETTING_LABELS,
-  SETTING_ORDER,
   toggleSetting,
   useSettings,
+  type AppSettings,
 } from "../settings/settingsStore";
 import { List } from "../components/List";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
@@ -36,6 +34,78 @@ const panelWidth = screen.width - HEADER_LAYOUT.paddingX * 2;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
 
+type SettingRowConfig = {
+  id: string;
+  label: string;
+  variant: "knob" | "action";
+  key?: keyof AppSettings;
+  isDisabled?: (settings: AppSettings) => boolean;
+  onSelect?: (onCustomSort?: () => void) => void;
+};
+
+const SETTING_ROWS: SettingRowConfig[] = [
+  {
+    id: "showAppTitles",
+    key: "showAppTitles",
+    label: "Show App Titles",
+    variant: "knob",
+  },
+  {
+    id: "enableHaptics",
+    key: "enableHaptics",
+    label: "Enable Haptics",
+    isDisabled: () => true,
+    variant: "knob",
+  },
+  {
+    id: "showPageNumbers",
+    key: "showPageNumbers",
+    label: "Show Page Numbers",
+    isDisabled: () => true,
+    variant: "knob",
+  },
+  {
+    id: "alphabeticalSort",
+    key: "alphabeticalSort",
+    label: "Alphabetical Sort",
+    variant: "knob",
+  },
+  {
+    id: "compactView",
+    key: "compactView",
+    label: "Compact View",
+    variant: "knob",
+  },
+  {
+    id: "showLastPlayed",
+    key: "showLastPlayed",
+    label: "Show Last Played",
+    variant: "knob",
+    isDisabled: (currentSettings) => !currentSettings.showAppTitles,
+  },
+  {
+    id: "enableSounds",
+    key: "enableSounds",
+    label: "Enable Sounds",
+    isDisabled: () => true,
+    variant: "knob",
+  },
+  {
+    id: "screensaver",
+    key: "screensaver",
+    label: "Screensaver",
+    isDisabled: () => true,
+    variant: "knob",
+  },
+  {
+    id: "custom-sort",
+    label: "Custom Sort",
+    variant: "action",
+    isDisabled: (currentSettings) => currentSettings.alphabeticalSort,
+    onSelect: (onCustomSort) => onCustomSort?.(),
+  },
+];
+
 function ensureVisible(index: number, offset: number): number {
   if (index < offset) return index;
   if (index >= offset + visibleCount) return index - visibleCount + 1;
@@ -45,31 +115,21 @@ function ensureVisible(index: number, offset: number): number {
 export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
   const settings = useSettings();
   const listElements = useMemo<ListElementModel[]>(
-    () => [
-      ...SETTING_ORDER.map((settingKey) => ({
-        id: settingKey as string,
-        label: SETTING_LABELS[settingKey],
-        variant: "knob" as const,
-        knobValue: settings[settingKey],
-        disabled: false,
-        onSelect: () => toggleSetting(settingKey),
+    () =>
+      SETTING_ROWS.map((row) => ({
+        id: row.id,
+        label: row.label,
+        variant: row.variant,
+        knobValue: row.key ? settings[row.key] : undefined,
+        disabled: row.isDisabled?.(settings) ?? false,
+        onSelect: () => {
+          if (row.key) {
+            toggleSetting(row.key);
+            return;
+          }
+          row.onSelect?.(onCustomSort);
+        },
       })),
-      {
-        id: "compact-view-state",
-        label: "Layout",
-        variant: "select" as const,
-        selectValue: settings.compactView ? "Compact" : "Breathable",
-        disabled: true,
-        onSelect: () => {},
-      },
-      {
-        id: "custom-sort",
-        label: "Custom Sort",
-        variant: "dropdown" as const,
-        disabled: false,
-        onSelect: () => onCustomSort?.(),
-      },
-    ],
     [settings, onCustomSort],
   );
   const selectableIndexes = useMemo(

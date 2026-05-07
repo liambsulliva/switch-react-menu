@@ -2,7 +2,7 @@ import React from "react";
 import { Image, Rect, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
 
-export type ListElementVariant = "knob" | "select" | "dropdown" | "game";
+export type ListElementVariant = "knob" | "dropdown" | "action" | "game";
 
 export interface ListElementModel {
   id: string;
@@ -11,7 +11,6 @@ export interface ListElementModel {
   disabled?: boolean;
   onSelect?: () => void;
   knobValue?: boolean;
-  selectValue?: string;
   gameIconSrc?: string;
   gameVersion?: string;
   gameEyebrow?: string;
@@ -45,7 +44,6 @@ export function ListElement({
   isSelected,
   disabled = false,
   knobValue = false,
-  selectValue,
   gameIconSrc,
   gameVersion,
   gameEyebrow,
@@ -97,7 +95,11 @@ export function ListElement({
           y={y + height / 2}
           fill={labelColor}
           fontSize={26}
-          fontFamily={isSelected && !disabled ? "SourceSansPro-Bold" : "SourceSansPro-Regular"}
+          fontFamily={
+            isSelected && !disabled
+              ? "SourceSansPro-Bold"
+              : "SourceSansPro-Regular"
+          }
           textBaseline="middle"
         >
           {label}
@@ -124,22 +126,32 @@ export function ListElement({
             y={knobY}
             width={KNOB_SIZE}
             height={KNOB_SIZE}
-            fill={disabled ? COLORS.gray[500] : knobValue ? COLORS.gray[0] : COLORS.gray[400]}
+            fill={
+              disabled
+                ? COLORS.gray[500]
+                : knobValue
+                  ? COLORS.gray[0]
+                  : COLORS.gray[400]
+            }
           />
         </>
       )}
 
-      {variant === "select" && (
+      {variant === "action" && (
         <Text
           x={rightX + TRACK_W / 2}
           y={y + height / 2}
           fill={valueColor}
-          fontSize={24}
-          fontFamily={isSelected && !disabled ? "SourceSansPro-Bold" : "SourceSansPro-Regular"}
+          fontSize={28}
+          fontFamily={
+            isSelected && !disabled
+              ? "SourceSansPro-Bold"
+              : "SourceSansPro-Regular"
+          }
           textAlign="center"
           textBaseline="middle"
         >
-          {selectValue ?? ""}
+          Edit
         </Text>
       )}
 
@@ -188,7 +200,9 @@ export function ListElement({
               (isSelected ? COLORS.gray[0] : COLORS.gray[200])
             }
             fontSize={26}
-            fontFamily={isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"}
+            fontFamily={
+              isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
+            }
             textBaseline="middle"
           >
             {label}
