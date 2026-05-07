@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Rect, Text } from "react-tela";
+import { Image, Rect, Text } from "react-tela";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
 import { AppIcon } from "./components/AppIcon";
 import { CompactHome } from "./components/CompactHome";
 import { Navigation } from "./components/Navigation";
 import { SettingsMenu } from "./components/SettingsMenu";
+import { getCornerIconPng, getSettingsCogPng } from "./lib/iconPng";
 import { useGamepadNavigation } from "./hooks/useGamepadNavigation";
 import {
   recordLastPlayed,
@@ -29,11 +30,18 @@ function GridHome() {
   const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [focusArea, setFocusArea] = useState<"apps" | "navigation" | "settings">(
-    "apps",
-  );
+  const [focusArea, setFocusArea] = useState<
+    "apps" | "navigation" | "settings"
+  >("apps");
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
+  const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
+    string | null
+  >(null);
+  const [settingsCogFocusedSrc, setSettingsCogFocusedSrc] = useState<
+    string | null
+  >(null);
   const gap = 48;
 
   const apps = useMemo(() => {
@@ -81,6 +89,25 @@ function GridHome() {
     };
 
     loadApps();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      getCornerIconPng("#fff"),
+      getSettingsCogPng("#666"),
+      getSettingsCogPng("#fff"),
+    ]).then(([corner, settingsDefault, settingsFocused]) => {
+      if (!active) return;
+      setCornerIconSrc(corner);
+      setSettingsCogDefaultSrc(settingsDefault);
+      setSettingsCogFocusedSrc(settingsFocused);
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const itemsPerPage =
@@ -141,10 +168,14 @@ function GridHome() {
   }
 
   // Settings button layout constants
-  const settingsBtnCenterX = screen.width - 130;
+  const settingsBtnCenterX = screen.width - 62;
   const settingsBtnCenterY = 50;
-  const settingsBtnW = 160;
+  const settingsBtnW = 80;
   const settingsBtnH = 58;
+  const settingsCogSize = 36;
+  const cornerIconSize = 48;
+  const cornerIconX = 32;
+  const cornerIconY = settingsBtnCenterY - cornerIconSize / 2;
 
   return (
     <>
@@ -156,18 +187,20 @@ function GridHome() {
         fill="#0f0f0f"
       />
 
-      {/* Settings button — top right, bounding box centered on label */}
-      <Text
-        x={settingsBtnCenterX}
-        y={settingsBtnCenterY}
-        fill={focusArea === "settings" ? "#fff" : "#666"}
-        fontSize={26}
-        fontFamily="SourceSansPro-Regular"
-        textAlign="center"
-        textBaseline="middle"
-      >
-        Settings
-      </Text>
+      {/* Settings button — top right */}
+      {settingsCogDefaultSrc && settingsCogFocusedSrc && (
+        <Image
+          src={
+            focusArea === "settings"
+              ? settingsCogFocusedSrc
+              : settingsCogDefaultSrc
+          }
+          x={settingsBtnCenterX - settingsCogSize / 2}
+          y={settingsBtnCenterY - settingsCogSize / 2}
+          width={settingsCogSize}
+          height={settingsCogSize}
+        />
+      )}
       <Rect
         x={settingsBtnCenterX - settingsBtnW / 2}
         y={settingsBtnCenterY - settingsBtnH / 2}
@@ -176,6 +209,15 @@ function GridHome() {
         fill="transparent"
         onTouchStart={() => setShowSettings(true)}
       />
+      {cornerIconSrc && (
+        <Image
+          src={cornerIconSrc}
+          x={cornerIconX}
+          y={cornerIconY}
+          width={cornerIconSize}
+          height={cornerIconSize}
+        />
+      )}
 
       {visibleApps.map((displayedApp, index) => (
         <AppIcon

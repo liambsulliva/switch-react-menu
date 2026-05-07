@@ -1,5 +1,9 @@
-import React from "react";
-import { Text, Rect, Circle } from "react-tela";
+import React, { useEffect, useState } from "react";
+import { Rect, Circle, Image } from "react-tela";
+import {
+  getNextArrowPng,
+  getPrevArrowPng,
+} from "../lib/iconPng";
 
 interface NavigationProps {
   currentPage: number;
@@ -20,17 +24,52 @@ export function Navigation({
   selectedNavButton,
   showPageNumbers = true,
 }: NavigationProps) {
+  const [prevDefaultSrc, setPrevDefaultSrc] = useState<string | null>(null);
+  const [prevFocusedSrc, setPrevFocusedSrc] = useState<string | null>(null);
+  const [nextDefaultSrc, setNextDefaultSrc] = useState<string | null>(null);
+  const [nextFocusedSrc, setNextFocusedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      getPrevArrowPng("#666"),
+      getPrevArrowPng("#fff"),
+      getNextArrowPng("#666"),
+      getNextArrowPng("#fff"),
+    ]).then(([prevDefault, prevFocused, nextDefault, nextFocused]) => {
+      if (!active) return;
+      setPrevDefaultSrc(prevDefault);
+      setPrevFocusedSrc(prevFocused);
+      setNextDefaultSrc(nextDefault);
+      setNextFocusedSrc(nextFocused);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const arrowSize = 36;
+  const prevArrowX = 40;
+  const nextArrowX = screen.width - 62;
+  const arrowY = screen.height - 60;
+
   return (
     <>
-      <Text
-        x={50}
-        y={screen.height - 50}
-        fill={isNavigationFocused && selectedNavButton === 0 ? "#fff" : "#666"}
-        fontSize={24}
-        fontFamily="SourceSansPro-Bold"
-      >
-        {"< Prev"}
-      </Text>
+      {prevDefaultSrc && prevFocusedSrc && (
+        <Image
+          src={
+            isNavigationFocused && selectedNavButton === 0
+              ? prevFocusedSrc
+              : prevDefaultSrc
+          }
+          x={prevArrowX}
+          y={arrowY}
+          width={arrowSize}
+          height={arrowSize}
+        />
+      )}
       <Rect
         x={15}
         y={screen.height - 85}
@@ -39,16 +78,19 @@ export function Navigation({
         fill="transparent"
         onTouchStart={onPrevPage}
       />
-      <Text
-        x={screen.width - 50}
-        y={screen.height - 50}
-        fill={isNavigationFocused && selectedNavButton === 1 ? "#fff" : "#666"}
-        fontSize={24}
-        fontFamily="SourceSansPro-Bold"
-        textAlign="right"
-      >
-        {"Next >"}
-      </Text>
+      {nextDefaultSrc && nextFocusedSrc && (
+        <Image
+          src={
+            isNavigationFocused && selectedNavButton === 1
+              ? nextFocusedSrc
+              : nextDefaultSrc
+          }
+          x={nextArrowX}
+          y={arrowY}
+          width={arrowSize}
+          height={arrowSize}
+        />
+      )}
       <Rect
         x={screen.width - 155}
         y={screen.height - 85}
