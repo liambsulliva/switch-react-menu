@@ -7,6 +7,7 @@ import {
   toggleSetting,
   useSettings,
 } from "../settings/settingsStore";
+import { COLORS } from "../lib/colors";
 
 interface SettingsMenuProps {
   onClose: () => void;
@@ -236,86 +237,85 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
       <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
 
       {/* Settings rows */}
-      {SETTING_ORDER.slice(
-        scrollOffset,
-        scrollOffset + visibleCount,
-      ).map((settingKey, i) => {
-        const absoluteIndex = scrollOffset + i;
-        const isSelected = absoluteIndex === selectedIndex;
-        const value = settings[settingKey];
-        const label = SETTING_LABELS[settingKey];
-        const rowY = LIST_TOP + i * ITEM_HEIGHT;
-        const trackY = rowY + (ITEM_HEIGHT - TRACK_H) / 2;
-        const knobX =
-          TRACK_X + (value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
-        const knobY = trackY + (TRACK_H - KNOB_SIZE) / 2;
+      {SETTING_ORDER.slice(scrollOffset, scrollOffset + visibleCount).map(
+        (settingKey, i) => {
+          const absoluteIndex = scrollOffset + i;
+          const isSelected = absoluteIndex === selectedIndex;
+          const value = settings[settingKey];
+          const label = SETTING_LABELS[settingKey];
+          const rowY = LIST_TOP + i * ITEM_HEIGHT;
+          const trackY = rowY + (ITEM_HEIGHT - TRACK_H) / 2;
+          const knobX =
+            TRACK_X + (value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
+          const knobY = trackY + (TRACK_H - KNOB_SIZE) / 2;
 
-        return (
-          <React.Fragment key={absoluteIndex}>
-            {/* Selection highlight */}
-            {isSelected && (
+          return (
+            <React.Fragment key={absoluteIndex}>
+              {/* Selection highlight */}
+              {isSelected && (
+                <Rect
+                  x={PADDING_X}
+                  y={rowY}
+                  width={panelWidth}
+                  height={ITEM_HEIGHT}
+                  fill="#1a1a1a"
+                />
+              )}
+
+              {/* Row separator */}
+              <Rect
+                x={PADDING_X}
+                y={rowY + ITEM_HEIGHT - 1}
+                width={panelWidth}
+                height={1}
+                fill={COLORS.gray[800]}
+              />
+
+              {/* Touch target — full row, centered on the row */}
               <Rect
                 x={PADDING_X}
                 y={rowY}
                 width={panelWidth}
                 height={ITEM_HEIGHT}
-                fill="#1a1a1a"
+                fill="transparent"
+                onTouchStart={() => toggleItem(absoluteIndex)}
               />
-            )}
 
-            {/* Row separator */}
-            <Rect
-              x={PADDING_X}
-              y={rowY + ITEM_HEIGHT - 1}
-              width={panelWidth}
-              height={1}
-              fill="#1e1e1e"
-            />
+              {/* Label — vertically centered in row */}
+              <Text
+                x={PADDING_X + 24}
+                y={rowY + ITEM_HEIGHT / 2}
+                fill={isSelected ? COLORS.gray[0] : COLORS.gray[300]}
+                fontSize={26}
+                fontFamily={
+                  isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
+                }
+                textBaseline="middle"
+              >
+                {label}
+              </Text>
 
-            {/* Touch target — full row, centered on the row */}
-            <Rect
-              x={PADDING_X}
-              y={rowY}
-              width={panelWidth}
-              height={ITEM_HEIGHT}
-              fill="transparent"
-              onTouchStart={() => toggleItem(absoluteIndex)}
-            />
+              {/* Toggle track */}
+              <Rect
+                x={TRACK_X}
+                y={trackY}
+                width={TRACK_W}
+                height={TRACK_H}
+                fill={value ? COLORS.accent : COLORS.gray[600]}
+              />
 
-            {/* Label — vertically centered in row */}
-            <Text
-              x={PADDING_X + 24}
-              y={rowY + ITEM_HEIGHT / 2}
-              fill={isSelected ? "white" : "#999"}
-              fontSize={26}
-              fontFamily={
-                isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
-              }
-              textBaseline="middle"
-            >
-              {label}
-            </Text>
-
-            {/* Toggle track */}
-            <Rect
-              x={TRACK_X}
-              y={trackY}
-              width={TRACK_W}
-              height={TRACK_H}
-              fill={value ? "#4a9eff" : "#333"}
-            />
-
-            {/* Toggle knob */}
-            <Rect
-              x={knobX}
-              y={knobY}
-              width={KNOB_SIZE}
-              height={KNOB_SIZE}
-              fill={value ? "white" : "#666"}
-            />
-          </React.Fragment>
-        );
-      })}
+              {/* Toggle knob */}
+              <Rect
+                x={knobX}
+                y={knobY}
+                width={KNOB_SIZE}
+                height={KNOB_SIZE}
+                fill={value ? COLORS.gray[0] : COLORS.gray[400]}
+              />
+            </React.Fragment>
+          );
+        },
+      )}
 
       {/* Custom Sort action row */}
       {(() => {
@@ -333,7 +333,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
                 y={rowY}
                 width={panelWidth}
                 height={ITEM_HEIGHT}
-                fill="#1a1a1a"
+                fill={COLORS.rowSelected}
               />
             )}
             <Rect
@@ -341,7 +341,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
               y={rowY + ITEM_HEIGHT - 1}
               width={panelWidth}
               height={1}
-              fill="#1e1e1e"
+              fill={COLORS.gray[800]}
             />
             <Rect
               x={PADDING_X}
@@ -354,7 +354,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
             <Text
               x={PADDING_X + 24}
               y={rowY + ITEM_HEIGHT / 2}
-              fill={isSelected ? "white" : "#999"}
+              fill={isSelected ? COLORS.gray[0] : COLORS.gray[400]}
               fontSize={26}
               fontFamily={
                 isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
@@ -366,7 +366,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
             <Text
               x={arrowX}
               y={rowY + ITEM_HEIGHT / 2}
-              fill={isSelected ? "#4a9eff" : "#555"}
+              fill={isSelected ? COLORS.accent : COLORS.gray[400]}
               fontSize={28}
               fontFamily="SourceSansPro-Bold"
               textAlign="center"
@@ -386,14 +386,14 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
             y={LIST_TOP}
             width={4}
             height={scrollbarTrackHeight}
-            fill="#222"
+            fill={COLORS.gray[700]}
           />
           <Rect
             x={screen.width - PADDING_X + 8}
             y={scrollbarThumbY}
             width={4}
             height={scrollbarThumbHeight}
-            fill="#555"
+            fill={COLORS.gray[400]}
           />
         </>
       )}
@@ -404,14 +404,14 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
         y={screen.height - FOOTER_HEIGHT}
         width={panelWidth}
         height={1}
-        fill="#222"
+        fill={COLORS.gray[700]}
       />
 
       {/* Footer hints */}
       <Text
         x={PADDING_X}
         y={screen.height - FOOTER_HEIGHT / 2}
-        fill="#555"
+        fill={COLORS.gray[400]}
         fontSize={22}
         fontFamily="SourceSansPro-Regular"
         textBaseline="middle"

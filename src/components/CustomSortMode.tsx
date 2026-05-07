@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
+import { COLORS } from "../lib/colors";
 
 interface CustomSortModeProps {
   apps: Switch.Application[];
@@ -316,14 +317,14 @@ export function CustomSortMode({
           y={0}
           width={screen.width}
           height={screen.height}
-          fill="#0f0f0f"
+          fill={COLORS.background}
         />
 
         {/* Header title */}
         <Text
           x={PADDING_X}
           y={80}
-          fill="white"
+          fill={COLORS.gray[0]}
           fontSize={36}
           fontFamily="SourceSansPro-Bold"
           textBaseline="middle"
@@ -335,7 +336,7 @@ export function CustomSortMode({
         <Text
           x={screen.width - PADDING_X - 60}
           y={80}
-          fill="#666"
+          fill={COLORS.gray[400]}
           fontSize={24}
           fontFamily="SourceSansPro-Regular"
           textAlign="center"
@@ -345,7 +346,13 @@ export function CustomSortMode({
         </Text>
 
         {/* Header divider */}
-        <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
+        <Rect
+          x={PADDING_X}
+          y={112}
+          width={panelWidth}
+          height={1}
+          fill={COLORS.gray[700]}
+        />
 
         {/* Icons */}
         {orderedApps.map((app, i) => {
@@ -370,7 +377,7 @@ export function CustomSortMode({
                   y={iconRenderY - 6}
                   width={iconW + 12}
                   height={iconH + 12}
-                  fill="rgba(51,153,255,0.18)"
+                  fill={COLORS.accentBg}
                 />
               )}
 
@@ -382,7 +389,7 @@ export function CustomSortMode({
                   width={iconW + 10}
                   height={iconH + 10}
                   fill="none"
-                  stroke={isHeld ? "#3399ff" : "white"}
+                  stroke={isHeld ? COLORS.accent : COLORS.gray[0]}
                   lineWidth={5}
                 />
               )}
@@ -400,7 +407,13 @@ export function CustomSortMode({
               <Text
                 x={renderX + iconW / 2}
                 y={iconBottom + 20}
-                fill={isSelected ? (isHeld ? "#3399ff" : "white") : "#ddd"} // light blue for held selection
+                fill={
+                  isSelected
+                    ? isHeld
+                      ? COLORS.accent
+                      : COLORS.gray[0]
+                    : COLORS.gray[100]
+                }
                 fontSize={20}
                 fontFamily={
                   isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
@@ -420,14 +433,14 @@ export function CustomSortMode({
           y={screen.height - FOOTER_HEIGHT}
           width={panelWidth}
           height={1}
-          fill="#222"
+          fill={COLORS.gray[700]}
         />
 
         {/* Footer legend */}
         <Text
           x={PADDING_X}
           y={screen.height - FOOTER_HEIGHT / 2}
-          fill="#555"
+          fill={COLORS.gray[500]}
           fontSize={22}
           fontFamily="SourceSansPro-Regular"
           textBaseline="middle"
@@ -468,14 +481,14 @@ export function CustomSortMode({
         y={0}
         width={screen.width}
         height={screen.height}
-        fill="#0f0f0f"
+        fill={COLORS.background}
       />
 
       {/* Header title */}
       <Text
         x={PADDING_X}
         y={80}
-        fill="white"
+        fill={COLORS.gray[0]}
         fontSize={36}
         fontFamily="SourceSansPro-Bold"
         textBaseline="middle"
@@ -487,7 +500,7 @@ export function CustomSortMode({
       <Text
         x={screen.width - PADDING_X - 60}
         y={80}
-        fill="#666"
+        fill={COLORS.gray[400]}
         fontSize={24}
         fontFamily="SourceSansPro-Regular"
         textAlign="center"
@@ -497,7 +510,13 @@ export function CustomSortMode({
       </Text>
 
       {/* Header divider */}
-      <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
+      <Rect
+        x={PADDING_X}
+        y={112}
+        width={panelWidth}
+        height={1}
+        fill={COLORS.gray[700]}
+      />
 
       {/* App rows */}
       {visibleRows.map((app, i) => {
@@ -516,7 +535,7 @@ export function CustomSortMode({
                 y={rowY}
                 width={panelWidth}
                 height={COMPACT_ROW_HEIGHT}
-                fill={isHeld ? "#1a2035" : "#1a1a1a"}
+                fill={isHeld ? COLORS.rowSelectedBg : COLORS.rowSelected}
               />
             )}
 
@@ -526,7 +545,7 @@ export function CustomSortMode({
               y={rowY + COMPACT_ROW_HEIGHT - 1}
               width={panelWidth}
               height={1}
-              fill="#1e1e1e"
+              fill={COLORS.gray[800]}
             />
 
             {app.icon && (
@@ -542,7 +561,13 @@ export function CustomSortMode({
             <Text
               x={labelLeftX}
               y={rowY + COMPACT_ROW_HEIGHT / 2}
-              fill={isSelected ? (isHeld ? "#3399ff" : "white") : "#ddd"}
+              fill={
+                isSelected
+                  ? isHeld
+                    ? COLORS.accent
+                    : COLORS.gray[0]
+                  : COLORS.gray[100]
+              }
               fontSize={26}
               fontFamily={
                 isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
@@ -563,14 +588,14 @@ export function CustomSortMode({
             y={HEADER_HEIGHT}
             width={4}
             height={scrollbarTrackHeight}
-            fill="#222"
+            fill={COLORS.gray[700]}
           />
           <Rect
             x={screen.width - PADDING_X + 8}
             y={scrollbarThumbY}
             width={4}
             height={scrollbarThumbHeight}
-            fill="#555"
+            fill={COLORS.gray[500]}
           />
         </>
       )}
@@ -581,14 +606,14 @@ export function CustomSortMode({
         y={screen.height - FOOTER_HEIGHT}
         width={panelWidth}
         height={1}
-        fill="#222"
+        fill={COLORS.gray[700]}
       />
 
       {/* Footer legend */}
       <Text
         x={PADDING_X}
         y={screen.height - FOOTER_HEIGHT / 2}
-        fill="#555"
+        fill={COLORS.gray[500]}
         fontSize={22}
         fontFamily="SourceSansPro-Regular"
         textBaseline="middle"

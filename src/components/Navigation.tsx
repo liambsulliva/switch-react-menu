@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Rect, Circle, Image } from "react-tela";
+import { COLORS } from "../lib/colors";
 import {
   getNextArrowPng,
   getPrevArrowPng,
@@ -33,10 +34,10 @@ export function Navigation({
     let active = true;
 
     Promise.all([
-      getPrevArrowPng("#666"),
-      getPrevArrowPng("#fff"),
-      getNextArrowPng("#666"),
-      getNextArrowPng("#fff"),
+      getPrevArrowPng(COLORS.gray[400]),
+      getPrevArrowPng(COLORS.gray[0]),
+      getNextArrowPng(COLORS.gray[400]),
+      getNextArrowPng(COLORS.gray[0]),
     ]).then(([prevDefault, prevFocused, nextDefault, nextFocused]) => {
       if (!active) return;
       setPrevDefaultSrc(prevDefault);
@@ -112,7 +113,7 @@ export function Navigation({
               x={startX + i * dotSpacing}
               y={screen.height - 50}
               radius={dotRadius}
-              fill={i === currentPage ? "#fff" : "#666"}
+              fill={i === currentPage ? COLORS.gray[0] : COLORS.gray[400]}
             />
           );
         })}

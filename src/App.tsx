@@ -18,6 +18,7 @@ import {
   setCustomOrder,
   useCustomOrder,
 } from "./settings/customSortStore";
+import { COLORS } from "./lib/colors";
 
 export function App() {
   const settings = useSettings();
@@ -112,9 +113,9 @@ function GridHome() {
     let active = true;
 
     Promise.all([
-      getCornerIconPng("#fff"),
-      getSettingsCogPng("#666"),
-      getSettingsCogPng("#fff"),
+      getCornerIconPng(COLORS.gray[0]),
+      getSettingsCogPng(COLORS.gray[400]),
+      getSettingsCogPng(COLORS.gray[0]),
     ]).then(([corner, settingsDefault, settingsFocused]) => {
       if (!active) return;
       setCornerIconSrc(corner);

@@ -1,0 +1,20 @@
+export const COLORS = {
+  gray: {
+    0: "#ffffff",
+    100: "#dddddd",
+    200: "#bbbbbb",
+    300: "#999999",
+    400: "#666666",
+    500: "#555555",
+    600: "#333333",
+    700: "#222222",
+    800: "#1e1e1e",
+    900: "#1a1a1a",
+  } as const,
+  background: "#0f0f0f",
+  rowSelected: "#1a1a1a",
+  rowSelectedBg: "#1a2035",
+  accent: "#3399ff",
+  accentBg: "rgba(51,153,255,0.18)",
+  eyebrowLabel: "#8ec5ff",
+} as const;

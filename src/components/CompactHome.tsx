@@ -4,15 +4,13 @@ import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
+import { COLORS } from "../lib/colors";
 import {
   recordLastPlayed,
   useLastPlayedApplicationId,
 } from "../settings/lastPlayedStore";
 import { setSettings, useSettings } from "../settings/settingsStore";
-import {
-  setCustomOrder,
-  useCustomOrder,
-} from "../settings/customSortStore";
+import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 
 const ROW_HEIGHT = 84;
 const LIST_TOP = 130;
@@ -276,7 +274,15 @@ export function CompactHome() {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, sortedApps, selectedIndex, focusArea, appCount, showSettings, showCustomSort]);
+  }, [
+    buttonState,
+    sortedApps,
+    selectedIndex,
+    focusArea,
+    appCount,
+    showSettings,
+    showCustomSort,
+  ]);
 
   useEffect(() => {
     if (showSettings || showCustomSort) {
@@ -329,8 +335,7 @@ export function CompactHome() {
       (scrollbarTrackHeight - scrollbarThumbHeight);
 
   const labelLeftX = PADDING_X + ICON_GUTTER + ICON_SIZE + 24;
-  const versionRightX =
-    PADDING_X + panelWidth - (showScrollbar ? 32 : 24);
+  const versionRightX = PADDING_X + panelWidth - (showScrollbar ? 32 : 24);
 
   return (
     <>
@@ -452,7 +457,7 @@ export function CompactHome() {
               <Text
                 x={labelLeftX}
                 y={rowY + ROW_HEIGHT / 2 - 16}
-                fill="#8ec5ff"
+                fill={COLORS.eyebrowLabel}
                 fontSize={16}
                 fontFamily="SourceSansPro-Bold"
                 textBaseline="middle"
@@ -465,12 +470,10 @@ export function CompactHome() {
               <Text
                 x={labelLeftX}
                 y={labelCenterY}
-                fill={isSelected ? "white" : "#ddd"}
+                fill={isSelected ? COLORS.gray[0] : COLORS.gray[200]}
                 fontSize={26}
                 fontFamily={
-                  isSelected
-                    ? "SourceSansPro-Bold"
-                    : "SourceSansPro-Regular"
+                  isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
                 }
                 textBaseline="middle"
               >

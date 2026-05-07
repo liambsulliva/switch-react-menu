@@ -1,6 +1,7 @@
 import React from "react";
 import { Image, Text, Rect } from "react-tela";
 import { AppData } from "../types/AppData";
+import { COLORS } from "../lib/colors";
 
 interface AppIconProps {
   displayedApp: AppData;
@@ -39,7 +40,7 @@ export function AppIcon({
         <Text
           x={displayedApp.x}
           y={displayedApp.y - 6}
-          fill="#8ec5ff"
+          fill={COLORS.eyebrowLabel}
           fontSize={16}
           fontFamily="SourceSansPro-Bold"
           textAlign="left"
@@ -57,7 +58,7 @@ export function AppIcon({
               width={displayedApp.width + 10}
               height={displayedApp.height + 10}
               fill="none"
-              stroke="white"
+              stroke={COLORS.gray[0]}
               lineWidth={5}
             />
           )}
@@ -75,7 +76,7 @@ export function AppIcon({
         <Text
           x={displayedApp.x + displayedApp.width / 2}
           y={iconBottom + 20}
-          fill={isSelected ? "white" : "#ddd"}
+          fill={isSelected ? COLORS.gray[0] : COLORS.gray[200]}
           fontSize={24}
           fontFamily={
             isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
