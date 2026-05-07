@@ -7,6 +7,8 @@ interface GamepadNavigationProps {
   setSelectedIndex: (cb: (prev: number) => number) => void;
   paginatedApps: { app: Switch.Application }[];
   selectedIndex: number;
+  isActive?: boolean;
+  onOpenSettings?: () => void;
 }
 
 interface GamepadState {
@@ -18,6 +20,7 @@ interface GamepadState {
     Left: boolean;
     Right: boolean;
   };
+  plusPressed: boolean;
 }
 
 export function useGamepadNavigation({
@@ -26,10 +29,13 @@ export function useGamepadNavigation({
   setSelectedIndex,
   paginatedApps,
   selectedIndex,
+  isActive = true,
+  onOpenSettings,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
     shouldersPressed: { L: false, R: false },
     directionalPressed: { Left: false, Right: false },
+    plusPressed: false,
   });
 
   useEffect(() => {
@@ -39,6 +45,25 @@ export function useGamepadNavigation({
       const gamepad = navigator.getGamepads()[0];
       if (!gamepad) {
         return;
+      }
+
+      if (!isActive) {
+        animationFrameId = requestAnimationFrame(handleGamepadInput);
+        return;
+      }
+
+      // Plus button opens settings
+      if (
+        gamepad.buttons[Button.Plus].pressed &&
+        !gamepadState.plusPressed
+      ) {
+        setGamepadState((prev) => ({ ...prev, plusPressed: true }));
+        onOpenSettings?.();
+      } else if (
+        !gamepad.buttons[Button.Plus].pressed &&
+        gamepadState.plusPressed
+      ) {
+        setGamepadState((prev) => ({ ...prev, plusPressed: false }));
       }
 
       // L/R shoulder buttons
@@ -152,5 +177,7 @@ export function useGamepadNavigation({
     onPrevPage,
     onNextPage,
     setSelectedIndex,
+    isActive,
+    onOpenSettings,
   ]);
 }

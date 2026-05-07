@@ -1,0 +1,317 @@
+import React, { useEffect, useState } from "react";
+import { Rect, Text } from "react-tela";
+import { Button } from "@nx.js/constants";
+
+interface SettingItem {
+  label: string;
+  value: boolean;
+}
+
+interface SettingsMenuProps {
+  onClose: () => void;
+}
+
+interface ButtonState {
+  upPressed: boolean;
+  downPressed: boolean;
+  aPressed: boolean;
+  bPressed: boolean;
+}
+
+const ITEM_HEIGHT = 72;
+const LIST_TOP = 130;
+const PADDING_X = 64;
+const FOOTER_HEIGHT = 80;
+
+const INITIAL_SETTINGS: SettingItem[] = [
+  { label: "Auto-Launch Game", value: false },
+  { label: "Show App Titles", value: true },
+  { label: "Enable Haptics", value: true },
+  { label: "Show Page Numbers", value: true },
+  { label: "Alphabetical Sort", value: false },
+  { label: "Compact View", value: false },
+  { label: "Show Last Played", value: false },
+  { label: "Enable Sounds", value: false },
+  { label: "Screensaver", value: true },
+];
+
+const listHeight = screen.height - LIST_TOP - FOOTER_HEIGHT;
+const visibleCount = Math.floor(listHeight / ITEM_HEIGHT);
+const panelWidth = screen.width - PADDING_X * 2;
+
+const TRACK_W = 56;
+const TRACK_H = 28;
+const KNOB_SIZE = 22;
+const KNOB_PAD = 3;
+const TRACK_X = PADDING_X + panelWidth - TRACK_W - 48;
+
+function ensureVisible(index: number, offset: number): number {
+  if (index < offset) return index;
+  if (index >= offset + visibleCount) return index - visibleCount + 1;
+  return offset;
+}
+
+export function SettingsMenu({ onClose }: SettingsMenuProps) {
+  const [items, setItems] = useState<SettingItem[]>(INITIAL_SETTINGS);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [buttonState, setButtonState] = useState<ButtonState>({
+    upPressed: false,
+    downPressed: false,
+    aPressed: false,
+    bPressed: false,
+  });
+
+  useEffect(() => {
+    let rafId: number;
+
+    const loop = () => {
+      const gamepad = navigator.getGamepads()[0];
+      if (!gamepad) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+
+      const isUp =
+        gamepad.buttons[Button.Up].pressed ||
+        (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] < -0.5);
+      const isDown =
+        gamepad.buttons[Button.Down].pressed ||
+        (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] > 0.5);
+      const isA = gamepad.buttons[Button.A].pressed;
+      const isB = gamepad.buttons[Button.B].pressed;
+
+      if (isUp && !buttonState.upPressed) {
+        setButtonState((prev) => ({ ...prev, upPressed: true }));
+        setSelectedIndex((prev) => {
+          const next = Math.max(0, prev - 1);
+          setScrollOffset((off) => ensureVisible(next, off));
+          return next;
+        });
+      } else if (!isUp && buttonState.upPressed) {
+        setButtonState((prev) => ({ ...prev, upPressed: false }));
+      }
+
+      if (isDown && !buttonState.downPressed) {
+        setButtonState((prev) => ({ ...prev, downPressed: true }));
+        setSelectedIndex((prev) => {
+          const next = Math.min(items.length - 1, prev + 1);
+          setScrollOffset((off) => ensureVisible(next, off));
+          return next;
+        });
+      } else if (!isDown && buttonState.downPressed) {
+        setButtonState((prev) => ({ ...prev, downPressed: false }));
+      }
+
+      if (isA && !buttonState.aPressed) {
+        setButtonState((prev) => ({ ...prev, aPressed: true }));
+        setItems((prev) =>
+          prev.map((item, i) =>
+            i === selectedIndex ? { ...item, value: !item.value } : item,
+          ),
+        );
+      } else if (!isA && buttonState.aPressed) {
+        setButtonState((prev) => ({ ...prev, aPressed: false }));
+      }
+
+      if (isB && !buttonState.bPressed) {
+        setButtonState((prev) => ({ ...prev, bPressed: true }));
+        onClose();
+      } else if (!isB && buttonState.bPressed) {
+        setButtonState((prev) => ({ ...prev, bPressed: false }));
+      }
+
+      rafId = requestAnimationFrame(loop);
+    };
+
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [buttonState, selectedIndex, items, onClose]);
+
+  const toggleItem = (index: number) => {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, value: !item.value } : item,
+      ),
+    );
+    setSelectedIndex(index);
+  };
+
+  const scrollbarTrackHeight = listHeight;
+  const scrollbarThumbHeight = Math.max(
+    24,
+    (visibleCount / items.length) * scrollbarTrackHeight,
+  );
+  const scrollbarThumbY =
+    LIST_TOP +
+    (scrollOffset / (items.length - visibleCount)) *
+      (scrollbarTrackHeight - scrollbarThumbHeight);
+
+  return (
+    <>
+      {/* Background */}
+      <Rect
+        x={0}
+        y={0}
+        width={screen.width}
+        height={screen.height}
+        fill="#0f0f0f"
+      />
+
+      {/* Header: title */}
+      <Text
+        x={PADDING_X}
+        y={80}
+        fill="white"
+        fontSize={36}
+        fontFamily="SourceSansPro-Bold"
+        textBaseline="middle"
+      >
+        Settings
+      </Text>
+
+      {/* Header: back hint — text centered inside its touch target */}
+      <Text
+        x={screen.width - PADDING_X - 60}
+        y={80}
+        fill="#666"
+        fontSize={24}
+        fontFamily="SourceSansPro-Regular"
+        textAlign="center"
+        textBaseline="middle"
+      >
+        B Back
+      </Text>
+      {/* Back button hitbox — centered on the text above */}
+      <Rect
+        x={screen.width - PADDING_X - 120}
+        y={50}
+        width={120}
+        height={60}
+        fill="transparent"
+        onTouchStart={onClose}
+      />
+
+      {/* Header divider */}
+      <Rect x={PADDING_X} y={112} width={panelWidth} height={1} fill="#222" />
+
+      {/* Settings rows */}
+      {items.slice(scrollOffset, scrollOffset + visibleCount).map((item, i) => {
+        const absoluteIndex = scrollOffset + i;
+        const isSelected = absoluteIndex === selectedIndex;
+        const rowY = LIST_TOP + i * ITEM_HEIGHT;
+        const trackY = rowY + (ITEM_HEIGHT - TRACK_H) / 2;
+        const knobX =
+          TRACK_X + (item.value ? TRACK_W - KNOB_SIZE - KNOB_PAD : KNOB_PAD);
+        const knobY = trackY + (TRACK_H - KNOB_SIZE) / 2;
+
+        return (
+          <React.Fragment key={absoluteIndex}>
+            {/* Selection highlight */}
+            {isSelected && (
+              <Rect
+                x={PADDING_X}
+                y={rowY}
+                width={panelWidth}
+                height={ITEM_HEIGHT}
+                fill="#1a1a1a"
+              />
+            )}
+
+            {/* Row separator */}
+            <Rect
+              x={PADDING_X}
+              y={rowY + ITEM_HEIGHT - 1}
+              width={panelWidth}
+              height={1}
+              fill="#1e1e1e"
+            />
+
+            {/* Touch target — full row, centered on the row */}
+            <Rect
+              x={PADDING_X}
+              y={rowY}
+              width={panelWidth}
+              height={ITEM_HEIGHT}
+              fill="transparent"
+              onTouchStart={() => toggleItem(absoluteIndex)}
+            />
+
+            {/* Label — vertically centered in row */}
+            <Text
+              x={PADDING_X + 24}
+              y={rowY + ITEM_HEIGHT / 2}
+              fill={isSelected ? "white" : "#999"}
+              fontSize={26}
+              fontFamily={
+                isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
+              }
+              textBaseline="middle"
+            >
+              {item.label}
+            </Text>
+
+            {/* Toggle track */}
+            <Rect
+              x={TRACK_X}
+              y={trackY}
+              width={TRACK_W}
+              height={TRACK_H}
+              fill={item.value ? "#4a9eff" : "#333"}
+            />
+
+            {/* Toggle knob */}
+            <Rect
+              x={knobX}
+              y={knobY}
+              width={KNOB_SIZE}
+              height={KNOB_SIZE}
+              fill={item.value ? "white" : "#666"}
+            />
+          </React.Fragment>
+        );
+      })}
+
+      {/* Scrollbar track */}
+      {items.length > visibleCount && (
+        <>
+          <Rect
+            x={screen.width - PADDING_X + 8}
+            y={LIST_TOP}
+            width={4}
+            height={scrollbarTrackHeight}
+            fill="#222"
+          />
+          <Rect
+            x={screen.width - PADDING_X + 8}
+            y={scrollbarThumbY}
+            width={4}
+            height={scrollbarThumbHeight}
+            fill="#555"
+          />
+        </>
+      )}
+
+      {/* Footer divider */}
+      <Rect
+        x={PADDING_X}
+        y={screen.height - FOOTER_HEIGHT}
+        width={panelWidth}
+        height={1}
+        fill="#222"
+      />
+
+      {/* Footer hints */}
+      <Text
+        x={PADDING_X}
+        y={screen.height - FOOTER_HEIGHT / 2}
+        fill="#555"
+        fontSize={22}
+        fontFamily="SourceSansPro-Regular"
+        textBaseline="middle"
+      >
+        {"A  Toggle      B  Back"}
+      </Text>
+    </>
+  );
+}

@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Rect } from "react-tela";
+import { Rect, Text } from "react-tela";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
 import { AppIcon } from "./components/AppIcon";
 import { Navigation } from "./components/Navigation";
+import { SettingsMenu } from "./components/SettingsMenu";
 import { useGamepadNavigation } from "./hooks/useGamepadNavigation";
 
 export function App() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
   const gap = 48;
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
@@ -19,7 +21,7 @@ export function App() {
   useEffect(() => {
     const loadApps = async () => {
       const switchApps = Array.from(Switch.Application).filter(
-        (app) => app.icon
+        (app) => app.icon,
       );
       const displayedApps: AppData[] = [];
 
@@ -55,7 +57,7 @@ export function App() {
   const totalPages = Math.ceil(apps.length / itemsPerPage);
   const paginatedApps = apps.slice(
     currentPage * itemsPerPage,
-    (currentPage + 1) * itemsPerPage
+    (currentPage + 1) * itemsPerPage,
   );
 
   const handlePrevPage = () => {
@@ -77,6 +79,8 @@ export function App() {
     setSelectedIndex,
     paginatedApps,
     selectedIndex,
+    isActive: !showSettings,
+    onOpenSettings: () => setShowSettings(true),
   });
 
   const handleAppSelect = (index: number) => {
@@ -87,6 +91,16 @@ export function App() {
     }
   };
 
+  if (showSettings) {
+    return <SettingsMenu onClose={() => setShowSettings(false)} />;
+  }
+
+  // Settings button layout constants
+  const settingsBtnCenterX = screen.width - 130;
+  const settingsBtnCenterY = 50;
+  const settingsBtnW = 160;
+  const settingsBtnH = 58;
+
   return (
     <>
       <Rect
@@ -96,6 +110,28 @@ export function App() {
         height={screen.height}
         fill="#0f0f0f"
       />
+
+      {/* Settings button — top right, bounding box centered on label */}
+      <Text
+        x={settingsBtnCenterX}
+        y={settingsBtnCenterY}
+        fill="#666"
+        fontSize={26}
+        fontFamily="SourceSansPro-Regular"
+        textAlign="center"
+        textBaseline="middle"
+      >
+        Settings
+      </Text>
+      <Rect
+        x={settingsBtnCenterX - settingsBtnW / 2}
+        y={settingsBtnCenterY - settingsBtnH / 2}
+        width={settingsBtnW}
+        height={settingsBtnH}
+        fill="transparent"
+        onTouchStart={() => setShowSettings(true)}
+      />
+
       {visibleApps.map((displayedApp, index) => (
         <AppIcon
           key={index}
