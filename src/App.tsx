@@ -3,6 +3,7 @@ import { Rect, Text } from "react-tela";
 import { AppData } from "./types/AppData";
 import { truncate } from "./lib/truncate";
 import { AppIcon } from "./components/AppIcon";
+import { CompactHome } from "./components/CompactHome";
 import { Navigation } from "./components/Navigation";
 import { SettingsMenu } from "./components/SettingsMenu";
 import { useGamepadNavigation } from "./hooks/useGamepadNavigation";
@@ -14,6 +15,16 @@ import { useSettings } from "./settings/settingsStore";
 
 export function App() {
   const settings = useSettings();
+
+  if (settings.compactView) {
+    return <CompactHome />;
+  }
+
+  return <GridHome />;
+}
+
+function GridHome() {
+  const settings = useSettings();
   const lastPlayedId = useLastPlayedApplicationId();
   const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -23,7 +34,7 @@ export function App() {
   );
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const gap = settings.compactView ? 28 : 48;
+  const gap = 48;
 
   const apps = useMemo(() => {
     if (!settings.alphabeticalSort) {
