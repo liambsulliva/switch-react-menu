@@ -11,6 +11,18 @@ interface AppIconProps {
   showLastPlayedEyebrow?: boolean;
 }
 
+const iconUrlCache = new Map<string, string>();
+
+function getIconUrl(app: { id: bigint }, icon: ArrayBuffer): string {
+  const key = app.id.toString();
+  let url = iconUrlCache.get(key);
+  if (!url) {
+    url = URL.createObjectURL(new Blob([icon]));
+    iconUrlCache.set(key, url);
+  }
+  return url;
+}
+
 export function AppIcon({
   displayedApp,
   truncate,
@@ -50,7 +62,7 @@ export function AppIcon({
             />
           )}
           <Image
-            src={URL.createObjectURL(new Blob([displayedApp.app.icon]))}
+            src={getIconUrl(displayedApp.app, displayedApp.app.icon)}
             x={displayedApp.x}
             y={displayedApp.y}
             width={displayedApp.width}

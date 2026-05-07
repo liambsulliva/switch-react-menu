@@ -16,26 +16,41 @@ function loadId(): string | null {
   }
 }
 
-let lastPlayedApplicationId: string | null = loadId();
-const listeners = new Set<() => void>();
+/** Matches Save Data; updated in `recordLastPlayed` before launch. */
+let persistedLastPlayedApplicationId: string | null = loadId();
 
-function emit() {
-  for (const listener of listeners) {
-    listener();
-  }
+/**
+ * Drives the “Last Played!” UI. Initialized from storage when the menu app loads;
+ * not updated by `recordLastPlayed`, so the eyebrow only moves on the next run
+ * of the menu (e.g. after returning from a game).
+ */
+let revealedLastPlayedApplicationId: string | null = loadId();
+
+/** Revealed id only advances when this module loads again (new process / full reload). */
+export function subscribeLastPlayed(_onStoreChange: () => void): () => void {
+  return () => {};
 }
 
+/** Id used for the eyebrow (lags behind `persisted` until the next app boot). */
 export function getLastPlayedApplicationId(): string | null {
-  return lastPlayedApplicationId;
+  return revealedLastPlayedApplicationId;
 }
 
-/** Persist and broadcast the application id (decimal string of `Switch.Application.id`). */
+export function getPersistedLastPlayedApplicationId(): string | null {
+  return persistedLastPlayedApplicationId;
+}
+
+/**
+ * Writes the launched title to Save Data immediately, but does not refresh the
+ * revealed id — the UI keeps showing the previous “last played” until this
+ * process loads again.
+ */
 export function recordLastPlayed(app: { id: bigint }): void {
   const id = app.id.toString();
-  if (lastPlayedApplicationId === id) {
+  if (persistedLastPlayedApplicationId === id) {
     return;
   }
-  lastPlayedApplicationId = id;
+  persistedLastPlayedApplicationId = id;
   const ls = storage();
   if (ls) {
     try {
@@ -44,14 +59,6 @@ export function recordLastPlayed(app: { id: bigint }): void {
       // best-effort persistence
     }
   }
-  emit();
-}
-
-export function subscribeLastPlayed(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
 }
 
 export function useLastPlayedApplicationId(): string | null {

@@ -88,10 +88,18 @@ export function App() {
     setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
   };
 
-  const visibleApps = paginatedApps.map((app, index) => ({
-    ...app,
-    x: gap + index * (app.width + gap),
-  }));
+  const rowInnerWidth =
+    paginatedApps.reduce((sum, app) => sum + app.width, 0) +
+    Math.max(0, paginatedApps.length - 1) * gap;
+  const rowStartX =
+    paginatedApps.length === 0 ? 0 : (screen.width - rowInnerWidth) / 2;
+
+  let rowX = rowStartX;
+  const visibleApps = paginatedApps.map((app) => {
+    const placed = { ...app, x: rowX };
+    rowX += app.width + gap;
+    return placed;
+  });
 
   useGamepadNavigation({
     onPrevPage: handlePrevPage,

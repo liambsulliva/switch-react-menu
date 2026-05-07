@@ -59,6 +59,7 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
     bPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ up: null, down: null });
+  const gamepadArmedRef = useRef(false);
 
   useEffect(() => {
     let rafId: number;
@@ -101,6 +102,15 @@ export function SettingsMenu({ onClose }: SettingsMenuProps) {
         (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] > 0.5);
       const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
+
+      if (!gamepadArmedRef.current) {
+        if (!isA && !isB && !isUp && !isDown) {
+          gamepadArmedRef.current = true;
+          holdRepeatRef.current = { up: null, down: null };
+        }
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
 
       if (isUp && !buttonState.upPressed) {
         setButtonState((prev) => ({ ...prev, upPressed: true }));
