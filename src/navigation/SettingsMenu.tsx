@@ -61,7 +61,6 @@ const SETTING_ROWS: SettingRowConfig[] = [
     id: "showPageNumbers",
     key: "showPageNumbers",
     label: "Show Page Numbers",
-    isDisabled: () => true,
     variant: "knob",
   },
   {

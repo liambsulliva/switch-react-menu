@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Rect, Circle, Image } from "react-tela";
+import { Rect, Circle, Image, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
 import {
   getNextArrowPng,
@@ -101,22 +101,36 @@ export function Navigation({
         onTouchStart={onNextPage}
       />
 
-      {showPageNumbers &&
-        Array.from({ length: totalPages }, (_, i) => {
-          const dotRadius = 5;
-          const dotSpacing = 18;
-          const totalWidth = (totalPages - 1) * dotSpacing;
-          const startX = screen.width / 2 - totalWidth / 2;
-          return (
-            <Circle
-              key={i}
-              x={startX + i * dotSpacing}
-              y={screen.height - 50}
-              radius={dotRadius}
-              fill={i === currentPage ? COLORS.gray[0] : COLORS.gray[400]}
-            />
-          );
-        })}
+      {totalPages > 0 &&
+        (showPageNumbers ? (
+          <Text
+            x={screen.width / 2}
+            y={screen.height - 50}
+            fill={COLORS.gray[0]}
+            fontSize={24}
+            fontFamily="SourceSansPro-Regular"
+            textAlign="center"
+            textBaseline="middle"
+          >
+            {`${currentPage + 1} of ${totalPages}`}
+          </Text>
+        ) : (
+          Array.from({ length: totalPages }, (_, i) => {
+            const dotRadius = 5;
+            const dotSpacing = 18;
+            const totalWidth = (totalPages - 1) * dotSpacing;
+            const startX = screen.width / 2 - totalWidth / 2;
+            return (
+              <Circle
+                key={i}
+                x={startX + i * dotSpacing}
+                y={screen.height - 50}
+                radius={dotRadius}
+                fill={i === currentPage ? COLORS.gray[0] : COLORS.gray[400]}
+              />
+            );
+          })
+        ))}
     </>
   );
 }
