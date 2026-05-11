@@ -59,6 +59,10 @@ const CORNER_PATHS = [
   "m11.2 8.375l3.5-6q2.275.6 4.038 2.2t2.562 3.8zm-2.775 2.5L5 4.875q1.35-1.325 3.138-2.1T12 2q.325 0 .75.038t.775.087zm-6.1 3.625q-.15-.6-.238-1.225T2 12q0-1.775.575-3.35T4.2 5.775L9.25 14.5zm7 7.125q-2.275-.6-4.05-2.2t-2.575-3.8h10.075zM12 22q-.375 0-.763-.05t-.737-.1l5.075-8.725l3.425 6q-1.35 1.325-3.137 2.1T12 22m7.8-3.775L14.75 9.5h6.925q.15.6.238 1.225T22 12q0 1.75-.612 3.35T19.8 18.225",
 ];
 
+const ALBUM_PATHS = [
+  "M20.5 14.136V5.5h-17v8.35l4.7-3.8c.462-.375 1.205-.357 1.65.035l4.477 3.933l2.282-1.94c.462-.394 1.198-.386 1.646.017zM2.992 4h18.016c.537 0 .992.481.992 1.075v13.85c0 .596-.444 1.075-.992 1.075H2.992C2.455 20 2 19.519 2 18.925V5.075C2 4.479 2.444 4 2.992 4",
+];
+
 export const getPrevArrowPng = (fill: string) =>
   rasterizeIcon({
     key: `prev-${fill}-96`,
@@ -93,4 +97,13 @@ export const getCornerIconPng = (fill: string) =>
     viewBoxSize: 24,
     fill,
     paths: CORNER_PATHS,
+  });
+
+export const getAlbumIconPng = (fill: string) =>
+  rasterizeIcon({
+    key: `album-${fill}-96`,
+    size: 96,
+    viewBoxSize: 24,
+    fill,
+    paths: ALBUM_PATHS,
   });

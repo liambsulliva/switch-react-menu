@@ -5,10 +5,18 @@ import { truncate } from "../lib/truncate";
 import { AppIcon } from "../components/AppIcon";
 import { AppDetailsPane } from "../components/AppDetailsPane";
 import { Navigation } from "../components/Navigation";
+import { AlbumPage } from "./AlbumPage";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
-import { getCornerIconPng, getSettingsCogPng } from "../lib/iconPng";
-import { useGamepadNavigation } from "../hooks/useGamepadNavigation";
+import {
+  getAlbumIconPng,
+  getCornerIconPng,
+  getSettingsCogPng,
+} from "../lib/iconPng";
+import {
+  useGamepadNavigation,
+  type GridHomeFocusArea,
+} from "../hooks/useGamepadNavigation";
 import {
   recordLastPlayed,
   useLastPlayedApplicationId,
@@ -24,11 +32,10 @@ export function GridHome() {
   const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [focusArea, setFocusArea] = useState<
-    "apps" | "navigation" | "settings"
-  >("apps");
+  const [focusArea, setFocusArea] = useState<GridHomeFocusArea>("apps");
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
   const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(
     null,
@@ -38,6 +45,12 @@ export function GridHome() {
     string | null
   >(null);
   const [settingsCogFocusedSrc, setSettingsCogFocusedSrc] = useState<
+    string | null
+  >(null);
+  const [albumIconDefaultSrc, setAlbumIconDefaultSrc] = useState<
+    string | null
+  >(null);
+  const [albumIconFocusedSrc, setAlbumIconFocusedSrc] = useState<
     string | null
   >(null);
   const gap = 48;
@@ -104,14 +117,20 @@ export function GridHome() {
 
     Promise.all([
       getCornerIconPng(COLORS.gray[0]),
+      getAlbumIconPng(COLORS.gray[400]),
+      getAlbumIconPng(COLORS.gray[0]),
       getSettingsCogPng(COLORS.gray[400]),
       getSettingsCogPng(COLORS.gray[0]),
-    ]).then(([corner, settingsDefault, settingsFocused]) => {
-      if (!active) return;
-      setCornerIconSrc(corner);
-      setSettingsCogDefaultSrc(settingsDefault);
-      setSettingsCogFocusedSrc(settingsFocused);
-    });
+    ]).then(
+      ([corner, albumDefault, albumFocused, settingsDefault, settingsFocused]) => {
+        if (!active) return;
+        setCornerIconSrc(corner);
+        setAlbumIconDefaultSrc(albumDefault);
+        setAlbumIconFocusedSrc(albumFocused);
+        setSettingsCogDefaultSrc(settingsDefault);
+        setSettingsCogFocusedSrc(settingsFocused);
+      },
+    );
 
     return () => {
       active = false;
@@ -186,8 +205,9 @@ export function GridHome() {
     setFocusArea,
     navButtonIndex: selectedNavButton,
     setNavButtonIndex: setSelectedNavButton,
-    isActive: !showSettings && !showCustomSort && !detailsApp,
+    isActive: !showSettings && !showCustomSort && !detailsApp && !showAlbum,
     onOpenSettings: () => setShowSettings(true),
+    onOpenAlbum: () => setShowAlbum(true),
     onMinus: () => {
       const app = paginatedApps[selectedIndex]?.app;
       if (app) setDetailsApp(app);
@@ -205,6 +225,10 @@ export function GridHome() {
       setSelectedIndex(index);
     }
   };
+
+  if (showAlbum) {
+    return <AlbumPage onClose={() => setShowAlbum(false)} />;
+  }
 
   if (showSettings) {
     return (
@@ -238,6 +262,14 @@ export function GridHome() {
   const settingsBtnW = 80;
   const settingsBtnH = 58;
   const settingsCogSize = 36;
+  const settingsCogLeft = settingsBtnCenterX - settingsCogSize / 2;
+  const topBarIconGap = 16;
+  const albumIconSize = 48;
+  /** Top-right row: album sits immediately left of the settings cog. */
+  const albumIconX = settingsCogLeft - topBarIconGap - albumIconSize;
+  const albumIconY = settingsBtnCenterY - albumIconSize / 2;
+  const albumIconHitW = 56;
+  const albumIconHitH = 56;
   const cornerIconSize = 48;
   const cornerIconX = 32;
   const cornerIconY = settingsBtnCenterY - cornerIconSize / 2;
@@ -252,6 +284,38 @@ export function GridHome() {
         fill={COLORS.background}
       />
 
+      {cornerIconSrc && (
+        <Image
+          src={cornerIconSrc}
+          x={cornerIconX}
+          y={cornerIconY}
+          width={cornerIconSize}
+          height={cornerIconSize}
+        />
+      )}
+
+      {albumIconDefaultSrc && albumIconFocusedSrc && (
+        <Image
+          src={
+            focusArea === "album"
+              ? albumIconFocusedSrc
+              : albumIconDefaultSrc
+          }
+          x={albumIconX}
+          y={albumIconY}
+          width={albumIconSize}
+          height={albumIconSize}
+        />
+      )}
+      <Rect
+        x={albumIconX + albumIconSize / 2 - albumIconHitW / 2}
+        y={albumIconY + albumIconSize / 2 - albumIconHitH / 2}
+        width={albumIconHitW}
+        height={albumIconHitH}
+        fill="transparent"
+        onTouchStart={() => setShowAlbum(true)}
+      />
+
       {settingsCogDefaultSrc && settingsCogFocusedSrc && (
         <Image
           src={
@@ -259,7 +323,7 @@ export function GridHome() {
               ? settingsCogFocusedSrc
               : settingsCogDefaultSrc
           }
-          x={settingsBtnCenterX - settingsCogSize / 2}
+          x={settingsCogLeft}
           y={settingsBtnCenterY - settingsCogSize / 2}
           width={settingsCogSize}
           height={settingsCogSize}
@@ -273,15 +337,6 @@ export function GridHome() {
         fill="transparent"
         onTouchStart={() => setShowSettings(true)}
       />
-      {cornerIconSrc && (
-        <Image
-          src={cornerIconSrc}
-          x={cornerIconX}
-          y={cornerIconY}
-          width={cornerIconSize}
-          height={cornerIconSize}
-        />
-      )}
 
       {visibleAppSlots.map((displayedApp, index) => (
         <AppIcon

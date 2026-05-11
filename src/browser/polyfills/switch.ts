@@ -1,6 +1,7 @@
 // Polyfills the `Switch` namespace used by nx.js code.
-// Covers `Switch.readFile` (via `fetch`) and `Switch.Application` to read from /mock-data folder.
+// Covers `Switch.readFile` (via `fetch`), `Switch.Application`, and empty album mocks (browser shows gray tiles only).
 
+import { CapsAlbumFileContents } from "@nx.js/constants";
 import {
   MOCK_APPS,
   type MockAppDefinition,
@@ -93,6 +94,43 @@ const PATH_PREFIX_MAP: ReadonlyArray<readonly [string, string]> = [
   ["sdmc:/", "/sdmc/"],
 ];
 
+const EMPTY_ALBUM_BYTES = new ArrayBuffer(0);
+
+class BrowserMockAlbumFile extends File {
+  applicationId: bigint;
+  content: number;
+  id: number;
+  storage: number;
+
+  constructor(storage: number, idStr: string, ordinal: number) {
+    super([], `Screenshot_${ordinal.toString().padStart(3, "0")}.png`, {
+      type: "image/png",
+      lastModified: Date.now() - ordinal * 3_600_000,
+    });
+    this.storage = storage;
+    this.applicationId = MOCK_APPS[ordinal % MOCK_APPS.length]!.id;
+    this.content = CapsAlbumFileContents.ScreenShot;
+    this.id = ordinal;
+  }
+
+  thumbnail(): Promise<ArrayBuffer> {
+    return Promise.resolve(EMPTY_ALBUM_BYTES);
+  }
+}
+
+class BrowserMockAlbum extends Set<BrowserMockAlbumFile> {
+  readonly storage: number;
+
+  constructor(storage: number) {
+    super();
+    this.storage = storage;
+    const count = 17;
+    for (let i = 0; i < count; i++) {
+      this.add(new BrowserMockAlbumFile(storage, `mock-${i}`, i));
+    }
+  }
+}
+
 async function readFilePolyfill(path: string): Promise<ArrayBuffer | null> {
   let url = path;
   for (const [prefix, replacement] of PATH_PREFIX_MAP) {
@@ -112,8 +150,6 @@ async function readFilePolyfill(path: string): Promise<ArrayBuffer | null> {
 }
 
 export async function installSwitchPolyfill(): Promise<void> {
-  // Synthesize icon byte buffers up front so the App's iterator is
-  // synchronous (matches nx.js semantics).
   const apps: BrowserMockApplication[] = await Promise.all(
     MOCK_APPS.map(async (def) => {
       const icon = await generateIconBytes(def);
@@ -121,9 +157,6 @@ export async function installSwitchPolyfill(): Promise<void> {
     })
   );
 
-  // The `Switch.Application` value used by code in this repo is *both* a
-  // constructor and an iterable (via `Symbol.iterator`). We mirror that
-  // shape by attaching the iterator to the function object itself.
   function Application(_: bigint | string | URL | ArrayBuffer): MockApplication {
     throw new Error(
       "[Switch.Application] constructing arbitrary Application instances is not supported in browser preview"
@@ -138,6 +171,8 @@ export async function installSwitchPolyfill(): Promise<void> {
   const SwitchPolyfill = {
     readFile: readFilePolyfill,
     Application,
+    Album: BrowserMockAlbum,
+    AlbumFile: BrowserMockAlbumFile,
   };
 
   Object.defineProperty(globalThis, "Switch", {
