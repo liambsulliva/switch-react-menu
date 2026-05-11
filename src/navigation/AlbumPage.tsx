@@ -6,6 +6,9 @@ import { COLORS } from "../lib/colors";
 
 const GRID_COLS = 5;
 
+/** 16:9 matches Switch screenshots aspect ratio (1280x720). */
+const ALBUM_PREVIEW_ASPECT = 16 / 9;
+
 const VIEWPORT_HEIGHT =
   screen.height - HEADER_LAYOUT.contentTop - HEADER_LAYOUT.footerHeight;
 const PANEL_WIDTH = screen.width - HEADER_LAYOUT.paddingX * 2;
@@ -96,7 +99,7 @@ function computeGridLayout(photoCount: number): AlbumGridLayout | null {
   );
   const totalGutter = (GRID_COLS - 1) * gutter;
   const cellW = (PANEL_WIDTH - totalGutter) / GRID_COLS;
-  const rowH = cellW;
+  const rowH = cellW / ALBUM_PREVIEW_ASPECT;
   const rowStride = rowH + gutter;
   const totalRows = Math.ceil(photoCount / GRID_COLS);
   const visibleRows = Math.max(
