@@ -2,6 +2,9 @@ import React, { useEffect, useMemo } from "react";
 import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { COLORS } from "../lib/colors";
+import { truncate } from "../lib/truncate";
+
+const TITLE_MAX_LEN = 30;
 
 const iconUrlCache = new Map<string, string>();
 
@@ -80,7 +83,7 @@ export function AppDetailsPane({ app, onClose }: AppDetailsPaneProps) {
   const textLeft = panelX + PANEL_PAD + ICON_SIZE + 24;
   const rowY0 = panelY + PANEL_PAD + titleBlockH + 8;
   const rows: { label: string; value: string }[] = [
-    { label: "Name", value: app.name },
+    { label: "Name", value: truncate(app.name, TITLE_MAX_LEN) },
     { label: "Application ID", value: formatApplicationId(app.id) },
     { label: "Author", value: app.author },
     { label: "Version", value: app.version },
