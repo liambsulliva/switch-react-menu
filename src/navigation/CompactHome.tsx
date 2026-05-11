@@ -6,6 +6,7 @@ import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
 import { COLORS } from "../lib/colors";
 import { List } from "../components/List";
+import { AppDetailsPane } from "../components/AppDetailsPane";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import type { ListElementModel } from "../components/ListElement";
 import {
@@ -33,6 +34,7 @@ interface ButtonState {
   rightPressed: boolean;
   aPressed: boolean;
   plusPressed: boolean;
+  minusPressed: boolean;
 }
 
 interface HoldRepeatState {
@@ -68,6 +70,9 @@ export function CompactHome() {
   const [focusArea, setFocusArea] = useState<ListFocusArea>("apps");
   const [showSettings, setShowSettings] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
+  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(
+    null,
+  );
 
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
@@ -76,9 +81,12 @@ export function CompactHome() {
     rightPressed: false,
     aPressed: false,
     plusPressed: false,
+    minusPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ up: null, down: null });
   const gamepadArmedRef = useRef(false);
+  const detailsAppRef = useRef<Switch.Application | null>(null);
+  detailsAppRef.current = detailsApp;
 
   useEffect(() => {
     const loaded = Array.from(Switch.Application).filter((app) => app.icon);
@@ -194,6 +202,11 @@ export function CompactHome() {
         return;
       }
 
+      if (detailsAppRef.current) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+
       const isUp =
         gamepad.buttons[Button.Up].pressed ||
         (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] < -0.5);
@@ -208,9 +221,18 @@ export function CompactHome() {
         (Math.abs(gamepad.axes[0]) > 0.5 && gamepad.axes[0] > 0.5);
       const isA = gamepad.buttons[Button.A].pressed;
       const isPlus = gamepad.buttons[Button.Plus].pressed;
+      const isMinus = gamepad.buttons[Button.Minus].pressed;
 
       if (!gamepadArmedRef.current) {
-        if (!isA && !isPlus && !isUp && !isDown && !isLeft && !isRight) {
+        if (
+          !isA &&
+          !isPlus &&
+          !isMinus &&
+          !isUp &&
+          !isDown &&
+          !isLeft &&
+          !isRight
+        ) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = { up: null, down: null };
         }
@@ -295,6 +317,16 @@ export function CompactHome() {
         setButtonState((prev) => ({ ...prev, plusPressed: false }));
       }
 
+      if (isMinus && !buttonState.minusPressed) {
+        setButtonState((prev) => ({ ...prev, minusPressed: true }));
+        if (focusArea === "apps") {
+          const app = sortedApps[selectedIndex];
+          if (app) setDetailsApp(app);
+        }
+      } else if (!isMinus && buttonState.minusPressed) {
+        setButtonState((prev) => ({ ...prev, minusPressed: false }));
+      }
+
       rafId = requestAnimationFrame(loop);
     };
 
@@ -311,10 +343,10 @@ export function CompactHome() {
   ]);
 
   useEffect(() => {
-    if (showSettings || showCustomSort) {
+    if (showSettings || showCustomSort || detailsApp) {
       gamepadArmedRef.current = false;
     }
-  }, [showSettings, showCustomSort]);
+  }, [showSettings, showCustomSort, detailsApp]);
 
   if (showSettings) {
     return (
@@ -349,7 +381,7 @@ export function CompactHome() {
       rightActionLabel="Settings"
       rightActionActive={focusArea === "settings"}
       onRightActionTouchStart={() => setShowSettings(true)}
-      footerHint="A  Launch"
+      footerHint="A  Launch      −  Details"
     >
       <List
         x={HEADER_LAYOUT.paddingX}
@@ -387,6 +419,10 @@ export function CompactHome() {
         >
           No applications installed.
         </Text>
+      )}
+
+      {detailsApp && (
+        <AppDetailsPane app={detailsApp} onClose={() => setDetailsApp(null)} />
       )}
     </HeaderLayout>
   );

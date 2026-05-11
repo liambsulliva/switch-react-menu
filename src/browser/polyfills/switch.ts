@@ -33,6 +33,7 @@ interface MockApplication {
   readonly icon: ArrayBuffer;
   readonly nacp: ArrayBuffer;
   launch(): void;
+  findSaveData(fn?: (save: unknown) => boolean): unknown | undefined;
 }
 
 class BrowserMockApplication implements MockApplication {
@@ -42,6 +43,7 @@ class BrowserMockApplication implements MockApplication {
   readonly version: string;
   readonly icon: ArrayBuffer;
   readonly nacp: ArrayBuffer = new ArrayBuffer(0);
+  readonly hasSaveData: boolean;
 
   constructor(def: MockAppDefinition, icon: ArrayBuffer) {
     this.id = def.id;
@@ -49,6 +51,14 @@ class BrowserMockApplication implements MockApplication {
     this.author = def.author;
     this.version = def.version;
     this.icon = icon;
+    this.hasSaveData = def.hasSaveData !== false;
+  }
+
+  findSaveData(fn?: (save: unknown) => boolean): unknown | undefined {
+    if (!this.hasSaveData) return undefined;
+    const placeholder = {};
+    if (fn && !fn(placeholder)) return undefined;
+    return placeholder;
   }
 
   launch(): void {

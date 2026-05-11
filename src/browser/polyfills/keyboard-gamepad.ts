@@ -54,7 +54,6 @@ const KEY_MAP: Readonly<Record<string, KeyBinding>> = {
   Digit2: { button: Button.ZR },
 
   // Plus / minus
-  Backspace: { button: Button.Minus },
   Escape: { button: Button.Minus },
   Tab: { button: Button.Plus },
 };

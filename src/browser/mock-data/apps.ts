@@ -9,6 +9,7 @@ export interface MockAppDefinition {
   version: string;
   colors: [string, string];
   glyph: string;
+  hasSaveData?: boolean;
 }
 
 export const MOCK_APPS: MockAppDefinition[] = [
@@ -75,6 +76,7 @@ export const MOCK_APPS: MockAppDefinition[] = [
     version: "1.4.3",
     colors: ["#0a0e2a", "#88aaff"],
     glyph: "H",
+    hasSaveData: false,
   },
   {
     id: 0x0100b41013c82000n,
@@ -107,6 +109,7 @@ export const MOCK_APPS: MockAppDefinition[] = [
     version: "1.3.3",
     colors: ["#f5deb3", "#a52a2a"],
     glyph: "C",
+    hasSaveData: false,
   },
 ];
 

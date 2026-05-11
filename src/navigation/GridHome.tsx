@@ -3,6 +3,7 @@ import { Image, Rect } from "react-tela";
 import { AppData } from "../types/AppData";
 import { truncate } from "../lib/truncate";
 import { AppIcon } from "../components/AppIcon";
+import { AppDetailsPane } from "../components/AppDetailsPane";
 import { Navigation } from "../components/Navigation";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
@@ -29,6 +30,9 @@ export function GridHome() {
   const [selectedNavButton, setSelectedNavButton] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
+  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(
+    null,
+  );
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
     string | null
@@ -182,8 +186,12 @@ export function GridHome() {
     setFocusArea,
     navButtonIndex: selectedNavButton,
     setNavButtonIndex: setSelectedNavButton,
-    isActive: !showSettings && !showCustomSort,
+    isActive: !showSettings && !showCustomSort && !detailsApp,
     onOpenSettings: () => setShowSettings(true),
+    onMinus: () => {
+      const app = paginatedApps[selectedIndex]?.app;
+      if (app) setDetailsApp(app);
+    },
   });
 
   const handleAppSelect = (index: number) => {
@@ -299,6 +307,10 @@ export function GridHome() {
         selectedNavButton={selectedNavButton}
         showPageNumbers={settings.showPageNumbers}
       />
+
+      {detailsApp && (
+        <AppDetailsPane app={detailsApp} onClose={() => setDetailsApp(null)} />
+      )}
     </>
   );
 }

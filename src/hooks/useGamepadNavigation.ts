@@ -16,6 +16,7 @@ interface GamepadNavigationProps {
   setNavButtonIndex: (cb: (prev: number) => number) => void;
   isActive?: boolean;
   onOpenSettings?: () => void;
+  onMinus?: () => void;
 }
 
 interface GamepadState {
@@ -30,6 +31,7 @@ interface GamepadState {
     Down: boolean;
   };
   plusPressed: boolean;
+  minusPressed: boolean;
   aPressed: boolean;
 }
 
@@ -53,11 +55,13 @@ export function useGamepadNavigation({
   setNavButtonIndex,
   isActive = true,
   onOpenSettings,
+  onMinus,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
     shouldersPressed: { L: false, R: false },
     directionalPressed: { Left: false, Right: false, Up: false, Down: false },
     plusPressed: false,
+    minusPressed: false,
     aPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ left: null, right: null });
@@ -130,6 +134,21 @@ export function useGamepadNavigation({
         gamepadState.plusPressed
       ) {
         setGamepadState((prev) => ({ ...prev, plusPressed: false }));
+      }
+
+      if (
+        gamepad.buttons[Button.Minus].pressed &&
+        !gamepadState.minusPressed
+      ) {
+        setGamepadState((prev) => ({ ...prev, minusPressed: true }));
+        if (focusArea === "apps") {
+          onMinus?.();
+        }
+      } else if (
+        !gamepad.buttons[Button.Minus].pressed &&
+        gamepadState.minusPressed
+      ) {
+        setGamepadState((prev) => ({ ...prev, minusPressed: false }));
       }
 
       // L/R shoulder buttons
@@ -310,5 +329,6 @@ export function useGamepadNavigation({
     setNavButtonIndex,
     isActive,
     onOpenSettings,
+    onMinus,
   ]);
 }
