@@ -12,6 +12,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import {
   getAlbumIconPng,
   getCornerIconPng,
+  getGlobeIconPng,
   getSettingsCogPng,
 } from "../lib/iconPng";
 import {
@@ -26,6 +27,15 @@ import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 import { COLORS } from "../lib/colors";
 
+const GRID_HOME_WEB_APPLET_URL = "https://google.com";
+
+function openSwitchWebApplet(url: string = GRID_HOME_WEB_APPLET_URL) {
+  void (async () => {
+    const applet = new Switch.WebApplet(url);
+    await applet.start({ jsExtension: true });
+  })();
+}
+
 export function GridHome() {
   const settings = useSettings();
   const customOrder = useCustomOrder();
@@ -38,9 +48,7 @@ export function GridHome() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
-  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(
-    null,
-  );
+  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
     string | null
@@ -48,12 +56,18 @@ export function GridHome() {
   const [settingsCogFocusedSrc, setSettingsCogFocusedSrc] = useState<
     string | null
   >(null);
-  const [albumIconDefaultSrc, setAlbumIconDefaultSrc] = useState<
-    string | null
-  >(null);
-  const [albumIconFocusedSrc, setAlbumIconFocusedSrc] = useState<
-    string | null
-  >(null);
+  const [albumIconDefaultSrc, setAlbumIconDefaultSrc] = useState<string | null>(
+    null,
+  );
+  const [albumIconFocusedSrc, setAlbumIconFocusedSrc] = useState<string | null>(
+    null,
+  );
+  const [globeIconDefaultSrc, setGlobeIconDefaultSrc] = useState<string | null>(
+    null,
+  );
+  const [globeIconFocusedSrc, setGlobeIconFocusedSrc] = useState<string | null>(
+    null,
+  );
   const gap = 48;
 
   const apps = useMemo(() => {
@@ -120,14 +134,26 @@ export function GridHome() {
       getCornerIconPng(COLORS.gray[0]),
       getAlbumIconPng(COLORS.gray[400]),
       getAlbumIconPng(COLORS.gray[0]),
+      getGlobeIconPng(COLORS.gray[400]),
+      getGlobeIconPng(COLORS.gray[0]),
       getSettingsCogPng(COLORS.gray[400]),
       getSettingsCogPng(COLORS.gray[0]),
     ]).then(
-      ([corner, albumDefault, albumFocused, settingsDefault, settingsFocused]) => {
+      ([
+        corner,
+        albumDefault,
+        albumFocused,
+        globeDefault,
+        globeFocused,
+        settingsDefault,
+        settingsFocused,
+      ]) => {
         if (!active) return;
         setCornerIconSrc(corner);
         setAlbumIconDefaultSrc(albumDefault);
         setAlbumIconFocusedSrc(albumFocused);
+        setGlobeIconDefaultSrc(globeDefault);
+        setGlobeIconFocusedSrc(globeFocused);
         setSettingsCogDefaultSrc(settingsDefault);
         setSettingsCogFocusedSrc(settingsFocused);
       },
@@ -192,9 +218,12 @@ export function GridHome() {
     rowX += app.width + gap;
     return placed;
   });
-  const visibleAppSlots = Array.from({ length: visibleApps.length }, (_, index) => {
-    return visibleApps[index];
-  });
+  const visibleAppSlots = Array.from(
+    { length: visibleApps.length },
+    (_, index) => {
+      return visibleApps[index];
+    },
+  );
 
   useGamepadNavigation({
     onPrevPage: handlePrevPage,
@@ -209,6 +238,7 @@ export function GridHome() {
     isActive: !showSettings && !showCustomSort && !detailsApp && !showAlbum,
     onOpenSettings: () => setShowSettings(true),
     onOpenAlbum: () => setShowAlbum(true),
+    onOpenWebBrowser: () => openSwitchWebApplet(),
     onMinus: () => {
       const app = paginatedApps[selectedIndex]?.app;
       if (app) setDetailsApp(app);
@@ -266,11 +296,15 @@ export function GridHome() {
   const settingsCogLeft = settingsBtnCenterX - settingsCogSize / 2;
   const topBarIconGap = 16;
   const albumIconSize = 48;
-  /** Top-right row: album sits immediately left of the settings cog. */
+  const globeIconSize = 48;
   const albumIconX = settingsCogLeft - topBarIconGap - albumIconSize;
   const albumIconY = settingsBtnCenterY - albumIconSize / 2;
   const albumIconHitW = 56;
   const albumIconHitH = 56;
+  const globeIconX = albumIconX - topBarIconGap - globeIconSize;
+  const globeIconY = settingsBtnCenterY - globeIconSize / 2;
+  const globeIconHitW = 56;
+  const globeIconHitH = 56;
   const cornerIconSize = 48;
   const cornerIconX = 32;
   const cornerIconY = settingsBtnCenterY - cornerIconSize / 2;
@@ -295,12 +329,30 @@ export function GridHome() {
         />
       )}
 
+      {globeIconDefaultSrc && globeIconFocusedSrc && (
+        <Image
+          src={
+            focusArea === "globe" ? globeIconFocusedSrc : globeIconDefaultSrc
+          }
+          x={globeIconX}
+          y={globeIconY}
+          width={globeIconSize}
+          height={globeIconSize}
+        />
+      )}
+      <Rect
+        x={globeIconX + globeIconSize / 2 - globeIconHitW / 2}
+        y={globeIconY + globeIconSize / 2 - globeIconHitH / 2}
+        width={globeIconHitW}
+        height={globeIconHitH}
+        fill="transparent"
+        onTouchStart={() => openSwitchWebApplet()}
+      />
+
       {albumIconDefaultSrc && albumIconFocusedSrc && (
         <Image
           src={
-            focusArea === "album"
-              ? albumIconFocusedSrc
-              : albumIconDefaultSrc
+            focusArea === "album" ? albumIconFocusedSrc : albumIconDefaultSrc
           }
           x={albumIconX}
           y={albumIconY}

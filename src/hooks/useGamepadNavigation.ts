@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
 import { recordLastPlayed } from "../settings/lastPlayedStore";
 
-export type GridHomeFocusArea = "apps" | "navigation" | "settings" | "album";
+export type GridHomeFocusArea =
+  | "apps"
+  | "navigation"
+  | "settings"
+  | "album"
+  | "globe";
 
 interface GamepadNavigationProps {
   onPrevPage: () => void;
@@ -17,6 +22,7 @@ interface GamepadNavigationProps {
   isActive?: boolean;
   onOpenSettings?: () => void;
   onOpenAlbum?: () => void;
+  onOpenWebBrowser?: () => void;
   onMinus?: () => void;
 }
 
@@ -57,6 +63,7 @@ export function useGamepadNavigation({
   isActive = true,
   onOpenSettings,
   onOpenAlbum,
+  onOpenWebBrowser,
   onMinus,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
@@ -85,6 +92,8 @@ export function useGamepadNavigation({
     const handleLeftPress = () => {
       if (focusArea === "settings") {
         setFocusArea(() => "album");
+      } else if (focusArea === "album") {
+        setFocusArea(() => "globe");
       } else if (focusArea === "apps") {
         setSelectedIndex((prev) => {
           const newIndex = prev - 1;
@@ -102,6 +111,8 @@ export function useGamepadNavigation({
     const handleRightPress = () => {
       if (focusArea === "album") {
         setFocusArea(() => "settings");
+      } else if (focusArea === "globe") {
+        setFocusArea(() => "album");
       } else if (focusArea === "apps") {
         setSelectedIndex((prev) => {
           const newIndex = prev + 1;
@@ -283,7 +294,8 @@ export function useGamepadNavigation({
           directionalPressed: { ...prev.directionalPressed, Down: true },
         }));
         setFocusArea((prev) => {
-          if (prev === "settings" || prev === "album") return "apps";
+          if (prev === "settings" || prev === "album" || prev === "globe")
+            return "apps";
           if (prev === "apps") return "navigation";
           return prev;
         });
@@ -311,6 +323,8 @@ export function useGamepadNavigation({
           onOpenSettings?.();
         } else if (focusArea === "album") {
           onOpenAlbum?.();
+        } else if (focusArea === "globe") {
+          onOpenWebBrowser?.();
         }
       } else if (!gamepad.buttons[Button.A].pressed && gamepadState.aPressed) {
         setGamepadState((prev) => ({ ...prev, aPressed: false }));
@@ -338,6 +352,7 @@ export function useGamepadNavigation({
     isActive,
     onOpenSettings,
     onOpenAlbum,
+    onOpenWebBrowser,
     onMinus,
   ]);
 }
