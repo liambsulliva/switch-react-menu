@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
 import {
   toggleSetting,
@@ -14,9 +14,13 @@ interface SettingsMenuProps {
   onCustomSort?: () => void;
 }
 
+type SettingsFocusArea = "list" | "back";
+
 interface ButtonState {
   upPressed: boolean;
   downPressed: boolean;
+  leftPressed: boolean;
+  rightPressed: boolean;
   aPressed: boolean;
   bPressed: boolean;
 }
@@ -24,6 +28,7 @@ interface ButtonState {
 interface HoldRepeatState {
   up: number | null;
   down: number | null;
+  left: number | null;
 }
 
 const ITEM_HEIGHT = 72;
@@ -144,35 +149,42 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
     () => selectableIndexes[0] ?? 0,
   );
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [focusArea, setFocusArea] = useState<SettingsFocusArea>("list");
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
     downPressed: false,
+    leftPressed: false,
+    rightPressed: false,
     aPressed: false,
     bPressed: false,
   });
-  const holdRepeatRef = useRef<HoldRepeatState>({ up: null, down: null });
+  const holdRepeatRef = useRef<HoldRepeatState>({
+    up: null,
+    down: null,
+    left: null,
+  });
   const gamepadArmedRef = useRef(false);
 
-  const getNextSelectableIndex = (
-    current: number,
-    direction: "up" | "down",
-  ): number => {
-    if (selectableIndexes.length === 0) return current;
-    if (!selectableIndexes.includes(current)) {
-      return selectableIndexes[0];
-    }
-    let candidate = current;
-    while (true) {
-      candidate += direction === "up" ? -1 : 1;
-      if (candidate < 0 || candidate >= totalItemCount) return current;
-      if (!listElements[candidate].disabled) return candidate;
-    }
-  };
+  const getNextSelectableIndex = useCallback(
+    (current: number, direction: "up" | "down"): number => {
+      if (selectableIndexes.length === 0) return current;
+      if (!selectableIndexes.includes(current)) {
+        return selectableIndexes[0]!;
+      }
+      let candidate = current;
+      while (true) {
+        candidate += direction === "up" ? -1 : 1;
+        if (candidate < 0 || candidate >= totalItemCount) return current;
+        if (!listElements[candidate]!.disabled) return candidate;
+      }
+    },
+    [selectableIndexes, listElements, totalItemCount],
+  );
 
   useEffect(() => {
     if (selectableIndexes.length === 0) return;
     if (!selectableIndexes.includes(selectedIndex)) {
-      const next = selectableIndexes[0];
+      const next = selectableIndexes[0]!;
       setSelectedIndex(next);
       setScrollOffset((off) => ensureVisible(next, off));
     }
@@ -210,53 +222,114 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
       const isDown =
         gamepad.buttons[Button.Down].pressed ||
         (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] > 0.5);
+      const isLeft =
+        gamepad.buttons[Button.Left].pressed ||
+        (Math.abs(gamepad.axes[0]) > 0.5 && gamepad.axes[0] < -0.5);
+      const isRight =
+        gamepad.buttons[Button.Right].pressed ||
+        (Math.abs(gamepad.axes[0]) > 0.5 && gamepad.axes[0] > 0.5);
       const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
 
       if (!gamepadArmedRef.current) {
-        if (!isA && !isB && !isUp && !isDown) {
+        if (!isA && !isB && !isUp && !isDown && !isLeft && !isRight) {
           gamepadArmedRef.current = true;
-          holdRepeatRef.current = { up: null, down: null };
+          holdRepeatRef.current = { up: null, down: null, left: null };
         }
         rafId = requestAnimationFrame(loop);
         return;
       }
 
-      if (isUp && !buttonState.upPressed) {
-        setButtonState((prev) => ({ ...prev, upPressed: true }));
-        holdRepeatRef.current.up = now;
-        moveSelection("up");
-      } else if (
-        isUp &&
-        buttonState.upPressed &&
-        canRepeat(holdRepeatRef.current.up, now)
-      ) {
-        moveSelection("up");
-      } else if (!isUp && buttonState.upPressed) {
-        setButtonState((prev) => ({ ...prev, upPressed: false }));
-        holdRepeatRef.current.up = null;
-      }
+      if (focusArea === "back") {
+        if (isUp && !buttonState.upPressed) {
+          setButtonState((prev) => ({ ...prev, upPressed: true }));
+        } else if (!isUp && buttonState.upPressed) {
+          setButtonState((prev) => ({ ...prev, upPressed: false }));
+        }
 
-      if (isDown && !buttonState.downPressed) {
-        setButtonState((prev) => ({ ...prev, downPressed: true }));
-        holdRepeatRef.current.down = now;
-        moveSelection("down");
-      } else if (
-        isDown &&
-        buttonState.downPressed &&
-        canRepeat(holdRepeatRef.current.down, now)
-      ) {
-        moveSelection("down");
-      } else if (!isDown && buttonState.downPressed) {
-        setButtonState((prev) => ({ ...prev, downPressed: false }));
-        holdRepeatRef.current.down = null;
-      }
+        if (isDown && !buttonState.downPressed) {
+          setButtonState((prev) => ({ ...prev, downPressed: true }));
+          holdRepeatRef.current.down = now;
+          gamepadArmedRef.current = false;
+          setFocusArea("list");
+        } else if (!isDown && buttonState.downPressed) {
+          setButtonState((prev) => ({ ...prev, downPressed: false }));
+          holdRepeatRef.current.down = null;
+        }
 
-      if (isA && !buttonState.aPressed) {
-        setButtonState((prev) => ({ ...prev, aPressed: true }));
-        listElements[selectedIndex]?.onSelect?.();
-      } else if (!isA && buttonState.aPressed) {
-        setButtonState((prev) => ({ ...prev, aPressed: false }));
+        if (isLeft && !buttonState.leftPressed) {
+          setButtonState((prev) => ({ ...prev, leftPressed: true }));
+          holdRepeatRef.current.left = now;
+          gamepadArmedRef.current = false;
+          setFocusArea("list");
+        } else if (
+          isLeft &&
+          buttonState.leftPressed &&
+          canRepeat(holdRepeatRef.current.left, now)
+        ) {
+          /* no-op */
+        } else if (!isLeft && buttonState.leftPressed) {
+          setButtonState((prev) => ({ ...prev, leftPressed: false }));
+          holdRepeatRef.current.left = null;
+        }
+
+        if (isRight && !buttonState.rightPressed) {
+          setButtonState((prev) => ({ ...prev, rightPressed: true }));
+        } else if (!isRight && buttonState.rightPressed) {
+          setButtonState((prev) => ({ ...prev, rightPressed: false }));
+        }
+
+        if (isA && !buttonState.aPressed) {
+          setButtonState((prev) => ({ ...prev, aPressed: true }));
+          onClose();
+        } else if (!isA && buttonState.aPressed) {
+          setButtonState((prev) => ({ ...prev, aPressed: false }));
+        }
+      } else {
+        const atTopOfList =
+          selectableIndexes.length === 0 ||
+          getNextSelectableIndex(selectedIndex, "up") === selectedIndex;
+
+        if (isUp && !buttonState.upPressed) {
+          setButtonState((prev) => ({ ...prev, upPressed: true }));
+          holdRepeatRef.current.up = now;
+          if (atTopOfList) {
+            setFocusArea("back");
+          } else {
+            moveSelection("up");
+          }
+        } else if (
+          isUp &&
+          buttonState.upPressed &&
+          canRepeat(holdRepeatRef.current.up, now)
+        ) {
+          if (!atTopOfList) moveSelection("up");
+        } else if (!isUp && buttonState.upPressed) {
+          setButtonState((prev) => ({ ...prev, upPressed: false }));
+          holdRepeatRef.current.up = null;
+        }
+
+        if (isDown && !buttonState.downPressed) {
+          setButtonState((prev) => ({ ...prev, downPressed: true }));
+          holdRepeatRef.current.down = now;
+          moveSelection("down");
+        } else if (
+          isDown &&
+          buttonState.downPressed &&
+          canRepeat(holdRepeatRef.current.down, now)
+        ) {
+          moveSelection("down");
+        } else if (!isDown && buttonState.downPressed) {
+          setButtonState((prev) => ({ ...prev, downPressed: false }));
+          holdRepeatRef.current.down = null;
+        }
+
+        if (isA && !buttonState.aPressed) {
+          setButtonState((prev) => ({ ...prev, aPressed: true }));
+          listElements[selectedIndex]?.onSelect?.();
+        } else if (!isA && buttonState.aPressed) {
+          setButtonState((prev) => ({ ...prev, aPressed: false }));
+        }
       }
 
       if (isB && !buttonState.bPressed) {
@@ -271,19 +344,38 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, selectedIndex, onClose, listElements]);
+  }, [
+    buttonState,
+    focusArea,
+    getNextSelectableIndex,
+    listElements,
+    onClose,
+    selectableIndexes,
+    selectedIndex,
+  ]);
 
   const toggleItem = (index: number) => {
     if (listElements[index]?.disabled) return;
+    setFocusArea("list");
     setSelectedIndex(index);
     listElements[index]?.onSelect?.();
+  };
+
+  const focusListRow = (index: number) => {
+    setFocusArea("list");
+    if (listElements[index]?.disabled) return;
+    setSelectedIndex(index);
+    setScrollOffset((off) => ensureVisible(index, off));
   };
 
   return (
     <HeaderLayout
       title="Settings"
-      rightActionLabel="B Back"
+      rightActionLabel="Back"
+      rightActionActive={focusArea === "back"}
       onRightActionTouchStart={onClose}
+      onRightActionMouseEnter={() => setFocusArea("back")}
+      onRightActionMouseLeave={() => setFocusArea("list")}
       footerHint="A  Select      B  Back"
     >
       <List
@@ -294,8 +386,10 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
         visibleCount={visibleCount}
         items={listElements}
         selectedIndex={selectedIndex}
+        isFocused={focusArea === "list"}
         scrollOffset={scrollOffset}
         onItemTouchStart={toggleItem}
+        onItemMouseEnter={focusListRow}
       />
     </HeaderLayout>
   );

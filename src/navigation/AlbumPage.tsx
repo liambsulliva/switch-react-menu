@@ -3,6 +3,7 @@ import { Image, Rect, Text } from "react-tela";
 import { Button, CapsAlbumStorage } from "@nx.js/constants";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import { COLORS } from "../lib/colors";
+import { ImagePreview } from "./ImagePreview";
 
 const GRID_COLS = 5;
 
@@ -69,6 +70,7 @@ interface ButtonState {
   downPressed: boolean;
   leftPressed: boolean;
   rightPressed: boolean;
+  aPressed: boolean;
   bPressed: boolean;
   minusPressed: boolean;
 }
@@ -93,10 +95,7 @@ interface AlbumGridLayout {
 function computeGridLayout(photoCount: number): AlbumGridLayout | null {
   if (photoCount === 0) return null;
 
-  const gutter = Math.max(
-    10,
-    Math.min(20, Math.floor(PANEL_WIDTH * 0.016)),
-  );
+  const gutter = Math.max(10, Math.min(20, Math.floor(PANEL_WIDTH * 0.016)));
   const totalGutter = (GRID_COLS - 1) * gutter;
   const cellW = (PANEL_WIDTH - totalGutter) / GRID_COLS;
   const rowH = cellW / ALBUM_PREVIEW_ASPECT;
@@ -121,6 +120,8 @@ function computeGridLayout(photoCount: number): AlbumGridLayout | null {
 
 /** No tile highlighted (e.g. pointer left the grid after hover). */
 const HIGHLIGHT_NONE = -1;
+
+type AlbumFocusArea = "grid" | "close";
 
 function tryMoveHighlight(
   index: number,
@@ -148,11 +149,15 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
   const { photos, ready } = useAlbumThumbnails();
   const [scrollRowOffset, setScrollRowOffset] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(HIGHLIGHT_NONE);
+  const [focusArea, setFocusArea] = useState<AlbumFocusArea>("grid");
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewIndexRef = useRef<number | null>(null);
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
     downPressed: false,
     leftPressed: false,
     rightPressed: false,
+    aPressed: false,
     bPressed: false,
     minusPressed: false,
   });
@@ -164,6 +169,17 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
   });
   const gamepadArmedRef = useRef(false);
 
+  useEffect(() => {
+    previewIndexRef.current = previewIndex;
+  }, [previewIndex]);
+
+  /** After closing the lightbox, ignore B/− until released so the album does not immediately exit. */
+  useEffect(() => {
+    if (previewIndex === null) {
+      gamepadArmedRef.current = false;
+    }
+  }, [previewIndex]);
+
   const layout = useMemo(
     () => computeGridLayout(photos.length),
     [photos.length],
@@ -171,9 +187,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
 
   useEffect(() => {
     if (!layout) return;
-    setScrollRowOffset((prev) =>
-      Math.min(prev, layout.maxScrollRow),
-    );
+    setScrollRowOffset((prev) => Math.min(prev, layout.maxScrollRow));
   }, [layout]);
 
   useEffect(() => {
@@ -237,11 +251,25 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       const isRight =
         gamepad.buttons[Button.Right].pressed ||
         (Math.abs(gamepad.axes[0]) > 0.5 && gamepad.axes[0] > 0.5);
+      const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
       const isMinus = gamepad.buttons[Button.Minus].pressed;
 
+      if (previewIndexRef.current !== null) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+
       if (!gamepadArmedRef.current) {
-        if (!isUp && !isDown && !isLeft && !isRight && !isB && !isMinus) {
+        if (
+          !isUp &&
+          !isDown &&
+          !isLeft &&
+          !isRight &&
+          !isA &&
+          !isB &&
+          !isMinus
+        ) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = {
             up: null,
@@ -254,17 +282,69 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
         return;
       }
 
-      if (photos.length > 0) {
+      if (focusArea === "close") {
+        if (isUp && !buttonState.upPressed) {
+          setButtonState((s) => ({ ...s, upPressed: true }));
+        } else if (!isUp && buttonState.upPressed) {
+          setButtonState((s) => ({ ...s, upPressed: false }));
+        }
+
+        if (isDown && !buttonState.downPressed) {
+          setButtonState((s) => ({ ...s, downPressed: true }));
+          holdRepeatRef.current.down = now;
+          setFocusArea("grid");
+          setHighlightedIndex((h) => (h === HIGHLIGHT_NONE ? 0 : h));
+        } else if (!isDown && buttonState.downPressed) {
+          setButtonState((s) => ({ ...s, downPressed: false }));
+          holdRepeatRef.current.down = null;
+        }
+
+        if (isLeft && !buttonState.leftPressed) {
+          setButtonState((s) => ({ ...s, leftPressed: true }));
+          holdRepeatRef.current.left = now;
+          setFocusArea("grid");
+        } else if (
+          isLeft &&
+          buttonState.leftPressed &&
+          canRepeat(holdRepeatRef.current.left, now)
+        ) {
+          /* no repeat navigation while header focused */
+        } else if (!isLeft && buttonState.leftPressed) {
+          setButtonState((s) => ({ ...s, leftPressed: false }));
+          holdRepeatRef.current.left = null;
+        }
+
+        if (isRight && !buttonState.rightPressed) {
+          setButtonState((s) => ({ ...s, rightPressed: true }));
+        } else if (!isRight && buttonState.rightPressed) {
+          setButtonState((s) => ({ ...s, rightPressed: false }));
+        }
+
+        if (isA && !buttonState.aPressed) {
+          setButtonState((s) => ({ ...s, aPressed: true }));
+          onClose();
+        } else if (!isA && buttonState.aPressed) {
+          setButtonState((s) => ({ ...s, aPressed: false }));
+        }
+      } else if (photos.length > 0) {
+        const atFirstRow =
+          highlightedIndex === HIGHLIGHT_NONE ||
+          highlightedIndex < GRID_COLS;
+
         if (isUp && !buttonState.upPressed) {
           setButtonState((s) => ({ ...s, upPressed: true }));
           holdRepeatRef.current.up = now;
-          moveHighlight(0, -1);
+          if (atFirstRow) {
+            setFocusArea("close");
+          } else {
+            moveHighlight(0, -1);
+          }
         } else if (
           isUp &&
           buttonState.upPressed &&
           canRepeat(holdRepeatRef.current.up, now)
         ) {
-          moveHighlight(0, -1);
+          if (!atFirstRow) moveHighlight(0, -1);
         } else if (!isUp && buttonState.upPressed) {
           setButtonState((s) => ({ ...s, upPressed: false }));
           holdRepeatRef.current.up = null;
@@ -314,6 +394,32 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           setButtonState((s) => ({ ...s, rightPressed: false }));
           holdRepeatRef.current.right = null;
         }
+
+        if (
+          isA &&
+          !buttonState.aPressed &&
+          highlightedIndex !== HIGHLIGHT_NONE
+        ) {
+          const thumb = photos[highlightedIndex];
+          if (thumb?.src) {
+            setButtonState((s) => ({ ...s, aPressed: true }));
+            setPreviewIndex(highlightedIndex);
+          }
+        } else if (!isA && buttonState.aPressed) {
+          setButtonState((s) => ({ ...s, aPressed: false }));
+        }
+      } else if (focusArea === "grid" && photos.length === 0) {
+        if (isUp && !buttonState.upPressed) {
+          setButtonState((s) => ({ ...s, upPressed: true }));
+          setFocusArea("close");
+        } else if (!isUp && buttonState.upPressed) {
+          setButtonState((s) => ({ ...s, upPressed: false }));
+        }
+        if (isDown && !buttonState.downPressed) {
+          setButtonState((s) => ({ ...s, downPressed: true }));
+        } else if (!isDown && buttonState.downPressed) {
+          setButtonState((s) => ({ ...s, downPressed: false }));
+        }
       }
 
       if (isB && !buttonState.bPressed) {
@@ -335,7 +441,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, layout, onClose, photos.length]);
+  }, [buttonState, focusArea, highlightedIndex, layout, onClose, photos]);
 
   const contentTop = HEADER_LAYOUT.contentTop;
   const showScrollbar = layout !== null && layout.maxScrollRow > 0;
@@ -357,9 +463,11 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
     <HeaderLayout
       title="Album"
       rightActionLabel="Close"
-      rightActionActive
+      rightActionActive={focusArea === "close"}
       onRightActionTouchStart={onClose}
-      footerHint="↑↓←→  Move      B  Back       −  Back"
+      onRightActionMouseEnter={() => setFocusArea("close")}
+      onRightActionMouseLeave={() => setFocusArea("grid")}
+      footerHint="↑↓←→  Move   Ⓐ  View      B / −  Back"
     >
       {!ready && (
         <Text
@@ -405,6 +513,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           const y = contentTop + (row - scrollRowOffset) * rowStride;
 
           const isHighlighted =
+            focusArea === "grid" &&
             highlightedIndex !== HIGHLIGHT_NONE &&
             index === highlightedIndex;
 
@@ -436,13 +545,24 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
                   y={y}
                   width={cellW}
                   height={rowH}
-                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseEnter={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                  }}
                   onMouseLeave={() =>
                     setHighlightedIndex((h) =>
                       h === index ? HIGHLIGHT_NONE : h,
                     )
                   }
-                  onTouchStart={() => setHighlightedIndex(index)}
+                  onTouchStart={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                  }}
+                  onClick={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                    setPreviewIndex(index);
+                  }}
                 />
               ) : (
                 <Rect
@@ -452,13 +572,19 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
                   height={rowH}
                   fill={COLORS.gray[700]}
                   borderRadius={3}
-                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseEnter={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                  }}
                   onMouseLeave={() =>
                     setHighlightedIndex((h) =>
                       h === index ? HIGHLIGHT_NONE : h,
                     )
                   }
-                  onTouchStart={() => setHighlightedIndex(index)}
+                  onTouchStart={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                  }}
                 />
               )}
             </Fragment>
@@ -483,6 +609,12 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           />
         </>
       )}
+
+      <ImagePreview
+        visible={previewIndex !== null}
+        src={previewIndex !== null ? (photos[previewIndex]?.src ?? null) : null}
+        onClose={() => setPreviewIndex(null)}
+      />
     </HeaderLayout>
   );
 }

@@ -25,6 +25,7 @@ interface ListElementProps extends ListElementModel {
   height: number;
   isSelected: boolean;
   onTouchStart?: () => void;
+  onMouseEnter?: () => void;
 }
 
 const TRACK_W = 56;
@@ -50,6 +51,7 @@ export function ListElement({
   valueColorOverride,
   rowSelectedFill,
   onTouchStart,
+  onMouseEnter,
 }: ListElementProps) {
   const rightX = x + width - 76;
   const labelColor = disabled
@@ -88,6 +90,7 @@ export function ListElement({
         height={height}
         fill="transparent"
         onTouchStart={disabled ? undefined : onTouchStart}
+        onMouseEnter={disabled ? undefined : onMouseEnter}
       />
       {variant !== "game" && (
         <Text

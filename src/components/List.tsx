@@ -14,6 +14,7 @@ interface ListProps {
   isFocused?: boolean;
   scrollOffset: number;
   onItemTouchStart?: (index: number) => void;
+  onItemMouseEnter?: (index: number) => void;
 }
 
 export function List({
@@ -27,6 +28,7 @@ export function List({
   isFocused = true,
   scrollOffset,
   onItemTouchStart,
+  onItemMouseEnter,
 }: ListProps) {
   const visibleItems = items.slice(scrollOffset, scrollOffset + visibleCount);
 
@@ -55,6 +57,7 @@ export function List({
             height={rowHeight}
             isSelected={isFocused && absoluteIndex === selectedIndex}
             onTouchStart={() => onItemTouchStart?.(absoluteIndex)}
+            onMouseEnter={() => onItemMouseEnter?.(absoluteIndex)}
             {...item}
           />
         );

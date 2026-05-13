@@ -13,6 +13,8 @@ interface HeaderLayoutProps {
   rightActionLabel?: string;
   rightActionActive?: boolean;
   onRightActionTouchStart?: () => void;
+  onRightActionMouseEnter?: () => void;
+  onRightActionMouseLeave?: () => void;
   footerHint: string;
   children: React.ReactNode;
 }
@@ -22,6 +24,8 @@ export function HeaderLayout({
   rightActionLabel,
   rightActionActive = false,
   onRightActionTouchStart,
+  onRightActionMouseEnter,
+  onRightActionMouseLeave,
   footerHint,
   children,
 }: HeaderLayoutProps) {
@@ -56,9 +60,7 @@ export function HeaderLayout({
             fill={rightActionActive ? COLORS.gray[0] : COLORS.gray[400]}
             fontSize={rightActionActive ? 26 : 24}
             fontFamily={
-              rightActionActive
-                ? "SourceSansPro-Bold"
-                : "SourceSansPro-Regular"
+              rightActionActive ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
             }
             textAlign="center"
             textBaseline="middle"
@@ -72,6 +74,9 @@ export function HeaderLayout({
             height={60}
             fill="transparent"
             onTouchStart={onRightActionTouchStart}
+            onClick={onRightActionTouchStart}
+            onMouseEnter={onRightActionMouseEnter}
+            onMouseLeave={onRightActionMouseLeave}
           />
         </>
       )}
