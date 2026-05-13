@@ -11,10 +11,18 @@ const MARGIN = 48;
 interface ImagePreviewProps {
   visible: boolean;
   src: string | null;
+  placeholderSrc?: string | null;
+  showLoadingHint?: boolean;
   onClose: () => void;
 }
 
-export function ImagePreview({ visible, src, onClose }: ImagePreviewProps) {
+export function ImagePreview({
+  visible,
+  src,
+  placeholderSrc = null,
+  showLoadingHint = false,
+  onClose,
+}: ImagePreviewProps) {
   useEffect(() => {
     if (!visible) return;
 
@@ -67,6 +75,14 @@ export function ImagePreview({ visible, src, onClose }: ImagePreviewProps) {
       />
       {src ? (
         <Image src={src} x={imgX} y={imgY} width={imgW} height={imgH} />
+      ) : placeholderSrc ? (
+        <Image
+          src={placeholderSrc}
+          x={imgX}
+          y={imgY}
+          width={imgW}
+          height={imgH}
+        />
       ) : (
         <Rect
           x={imgX}
@@ -76,6 +92,19 @@ export function ImagePreview({ visible, src, onClose }: ImagePreviewProps) {
           fill={COLORS.gray[800]}
           borderRadius={6}
         />
+      )}
+      {showLoadingHint && (
+        <Text
+          x={screen.width / 2}
+          y={imgY + imgH / 2}
+          fill={COLORS.gray[400]}
+          fontSize={22}
+          fontFamily="SourceSansPro-Regular"
+          textAlign="center"
+          textBaseline="middle"
+        >
+          Loading full image...
+        </Text>
       )}
       <Text
         x={screen.width / 2}

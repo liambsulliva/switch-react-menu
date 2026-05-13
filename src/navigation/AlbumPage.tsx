@@ -1,6 +1,10 @@
 import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Image, Rect, Text } from "react-tela";
-import { Button, CapsAlbumStorage } from "@nx.js/constants";
+import {
+  Button,
+  CapsAlbumFileContents,
+  CapsAlbumStorage,
+} from "@nx.js/constants";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import { COLORS } from "../lib/colors";
 import { ImagePreview } from "./ImagePreview";
@@ -121,6 +125,13 @@ function computeGridLayout(photoCount: number): AlbumGridLayout | null {
 /** No tile highlighted (e.g. pointer left the grid after hover). */
 const HIGHLIGHT_NONE = -1;
 
+function isAlbumScreenshot(file: Switch.AlbumFile): boolean {
+  return (
+    file.content === CapsAlbumFileContents.ScreenShot ||
+    file.content === CapsAlbumFileContents.ExtraScreenShot
+  );
+}
+
 type AlbumFocusArea = "grid" | "close";
 
 function tryMoveHighlight(
@@ -152,6 +163,9 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
   const [focusArea, setFocusArea] = useState<AlbumFocusArea>("grid");
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const previewIndexRef = useRef<number | null>(null);
+  const [previewFullSrc, setPreviewFullSrc] = useState<string | null>(null);
+  const [previewFullLoading, setPreviewFullLoading] = useState(false);
+  const previewFullUrlRef = useRef<string | null>(null);
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
     downPressed: false,
@@ -179,6 +193,70 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       gamepadArmedRef.current = false;
     }
   }, [previewIndex]);
+
+  useEffect(() => {
+    if (previewIndex === null) {
+      if (previewFullUrlRef.current) {
+        URL.revokeObjectURL(previewFullUrlRef.current);
+        previewFullUrlRef.current = null;
+      }
+      setPreviewFullSrc(null);
+      setPreviewFullLoading(false);
+      return;
+    }
+
+    const entry = photos[previewIndex];
+    if (!entry) {
+      setPreviewFullSrc(null);
+      setPreviewFullLoading(false);
+      return;
+    }
+
+    const { file } = entry;
+
+    if (previewFullUrlRef.current) {
+      URL.revokeObjectURL(previewFullUrlRef.current);
+      previewFullUrlRef.current = null;
+    }
+    setPreviewFullSrc(null);
+
+    if (!isAlbumScreenshot(file)) {
+      setPreviewFullLoading(false);
+      return;
+    }
+
+    setPreviewFullLoading(true);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const buf = await file.arrayBuffer();
+        if (cancelled) return;
+        if (buf.byteLength === 0) {
+          setPreviewFullSrc(null);
+          setPreviewFullLoading(false);
+          return;
+        }
+        const url = URL.createObjectURL(
+          new Blob([buf], { type: file.type || "image/jpeg" }),
+        );
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        previewFullUrlRef.current = url;
+        setPreviewFullSrc(url);
+      } catch {
+        if (!cancelled) setPreviewFullSrc(null);
+      } finally {
+        if (!cancelled) setPreviewFullLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewIndex, photos]);
 
   const layout = useMemo(
     () => computeGridLayout(photos.length),
@@ -401,7 +479,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           highlightedIndex !== HIGHLIGHT_NONE
         ) {
           const thumb = photos[highlightedIndex];
-          if (thumb?.src) {
+          if (thumb && (thumb.src || isAlbumScreenshot(thumb.file))) {
             setButtonState((s) => ({ ...s, aPressed: true }));
             setPreviewIndex(highlightedIndex);
           }
@@ -467,7 +545,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       onRightActionTouchStart={onClose}
       onRightActionMouseEnter={() => setFocusArea("close")}
       onRightActionMouseLeave={() => setFocusArea("grid")}
-      footerHint="↑↓←→  Move   Ⓐ  View      B / −  Back"
+      footerHint="↑↓←→  Move   A  View      B / −  Back"
     >
       {!ready && (
         <Text
@@ -585,6 +663,13 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
                     setFocusArea("grid");
                     setHighlightedIndex(index);
                   }}
+                  onClick={() => {
+                    setFocusArea("grid");
+                    setHighlightedIndex(index);
+                    if (isAlbumScreenshot(photo.file)) {
+                      setPreviewIndex(index);
+                    }
+                  }}
                 />
               )}
             </Fragment>
@@ -612,7 +697,11 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
 
       <ImagePreview
         visible={previewIndex !== null}
-        src={previewIndex !== null ? (photos[previewIndex]?.src ?? null) : null}
+        src={previewFullSrc}
+        placeholderSrc={
+          previewIndex !== null ? (photos[previewIndex]?.src ?? null) : null
+        }
+        showLoadingHint={previewFullLoading}
         onClose={() => setPreviewIndex(null)}
       />
     </HeaderLayout>
