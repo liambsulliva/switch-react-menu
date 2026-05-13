@@ -1,10 +1,18 @@
-import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Image, Rect, Text } from "react-tela";
 import {
   Button,
   CapsAlbumFileContents,
   CapsAlbumStorage,
 } from "@nx.js/constants";
+import { Modal, type ModalAction } from "../components/Modal";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import { COLORS } from "../lib/colors";
 import { ImagePreview } from "./ImagePreview";
@@ -27,14 +35,22 @@ interface LoadedThumb {
   readonly file: Switch.AlbumFile;
 }
 
-function useAlbumThumbnails(): { photos: LoadedThumb[]; ready: boolean } {
+function useAlbumThumbnails(): {
+  photos: LoadedThumb[];
+  ready: boolean;
+  removePhotoAt: (index: number) => boolean;
+} {
   const [photos, setPhotos] = useState<LoadedThumb[]>([]);
   const [ready, setReady] = useState(false);
   const urlsRef = useRef<string[]>([]);
+  const albumRef = useRef<Switch.Album | null>(null);
+  const photosRef = useRef<LoadedThumb[]>([]);
+  photosRef.current = photos;
 
   useEffect(() => {
     let cancelled = false;
     const album = new Switch.Album(CapsAlbumStorage.Sd);
+    albumRef.current = album;
     const files = Array.from(album);
 
     (async () => {
@@ -61,12 +77,28 @@ function useAlbumThumbnails(): { photos: LoadedThumb[]; ready: boolean } {
 
     return () => {
       cancelled = true;
+      albumRef.current = null;
       for (const u of urlsRef.current) URL.revokeObjectURL(u);
       urlsRef.current = [];
     };
   }, []);
 
-  return { photos, ready };
+  const removePhotoAt = useCallback((index: number): boolean => {
+    const album = albumRef.current;
+    if (!album) return false;
+    const entry = photosRef.current[index];
+    if (!entry) return false;
+    if (!album.delete(entry.file)) return false;
+    if (entry.src) {
+      URL.revokeObjectURL(entry.src);
+      const urlIdx = urlsRef.current.indexOf(entry.src);
+      if (urlIdx >= 0) urlsRef.current.splice(urlIdx, 1);
+    }
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    return true;
+  }, []);
+
+  return { photos, ready, removePhotoAt };
 }
 
 interface ButtonState {
@@ -77,6 +109,7 @@ interface ButtonState {
   aPressed: boolean;
   bPressed: boolean;
   minusPressed: boolean;
+  xPressed: boolean;
 }
 
 interface HoldRepeatState {
@@ -157,7 +190,7 @@ interface AlbumPageProps {
 }
 
 export function AlbumPage({ onClose }: AlbumPageProps) {
-  const { photos, ready } = useAlbumThumbnails();
+  const { photos, ready, removePhotoAt } = useAlbumThumbnails();
   const [scrollRowOffset, setScrollRowOffset] = useState(0);
   const [highlightedIndex, setHighlightedIndex] = useState(HIGHLIGHT_NONE);
   const [focusArea, setFocusArea] = useState<AlbumFocusArea>("grid");
@@ -166,6 +199,11 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
   const [previewFullSrc, setPreviewFullSrc] = useState<string | null>(null);
   const [previewFullLoading, setPreviewFullLoading] = useState(false);
   const previewFullUrlRef = useRef<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const pendingDeleteIndexRef = useRef<number | null>(null);
+  const deleteConfirmOpenRef = useRef(false);
+  const focusAreaRef = useRef<AlbumFocusArea>("grid");
+  const highlightedIndexRef = useRef(HIGHLIGHT_NONE);
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
     downPressed: false,
@@ -174,6 +212,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
     aPressed: false,
     bPressed: false,
     minusPressed: false,
+    xPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({
     up: null,
@@ -182,12 +221,31 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
     right: null,
   });
   const gamepadArmedRef = useRef(false);
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+
+  useEffect(() => {
+    deleteConfirmOpenRef.current = deleteConfirmOpen;
+  }, [deleteConfirmOpen]);
+
+  useEffect(() => {
+    focusAreaRef.current = focusArea;
+  }, [focusArea]);
+
+  useEffect(() => {
+    highlightedIndexRef.current = highlightedIndex;
+  }, [highlightedIndex]);
 
   useEffect(() => {
     previewIndexRef.current = previewIndex;
   }, [previewIndex]);
 
-  /** After closing the lightbox, ignore B/− until released so the album does not immediately exit. */
+  /** After closing the delete dialog, ignore inputs until released */
+  useEffect(() => {
+    if (!deleteConfirmOpen) {
+      gamepadArmedRef.current = false;
+    }
+  }, [deleteConfirmOpen]);
   useEffect(() => {
     if (previewIndex === null) {
       gamepadArmedRef.current = false;
@@ -257,6 +315,81 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       cancelled = true;
     };
   }, [previewIndex, photos]);
+
+  const stepPreview = useCallback((delta: number) => {
+    const pi = previewIndexRef.current;
+    if (pi === null) return;
+    const len = photosRef.current.length;
+    if (len === 0) return;
+    const next = Math.max(0, Math.min(len - 1, pi + delta));
+    if (next === pi) return;
+    setPreviewIndex(next);
+    setHighlightedIndex(next);
+  }, []);
+
+  const openDeleteConfirm = useCallback(() => {
+    if (deleteConfirmOpenRef.current) return;
+    const fromPreview = previewIndexRef.current;
+    let idx: number | null = null;
+    if (fromPreview !== null) {
+      idx = fromPreview;
+    } else if (
+      focusAreaRef.current === "grid" &&
+      highlightedIndexRef.current !== HIGHLIGHT_NONE
+    ) {
+      idx = highlightedIndexRef.current;
+    }
+    if (idx === null) return;
+    const list = photosRef.current;
+    if (!list[idx]) return;
+    pendingDeleteIndexRef.current = idx;
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  const closeDeleteConfirm = useCallback(() => {
+    pendingDeleteIndexRef.current = null;
+    setDeleteConfirmOpen(false);
+  }, []);
+
+  const performPreviewDelete = useCallback(() => {
+    const pi = pendingDeleteIndexRef.current;
+    if (pi === null) return;
+    const hadPreview = previewIndexRef.current !== null;
+    const oldLen = photosRef.current.length;
+    if (oldLen === 0) return;
+    if (!removePhotoAt(pi)) return;
+    pendingDeleteIndexRef.current = null;
+    setDeleteConfirmOpen(false);
+    const newLen = oldLen - 1;
+    if (newLen === 0) {
+      setPreviewIndex(null);
+      setHighlightedIndex(HIGHLIGHT_NONE);
+    } else {
+      const next = pi < newLen ? pi : newLen - 1;
+      if (hadPreview) setPreviewIndex(next);
+      else setPreviewIndex(null);
+      setHighlightedIndex(next);
+    }
+  }, [removePhotoAt]);
+
+  const deleteModalActions = useMemo(
+    (): ModalAction[] => [
+      {
+        id: "cancel",
+        label: "Cancel",
+        onPress: closeDeleteConfirm,
+      },
+      {
+        id: "delete",
+        label: "Delete",
+        variant: "destructive",
+        onPress: () => {
+          performPreviewDelete();
+        },
+      },
+    ],
+    [closeDeleteConfirm, performPreviewDelete],
+  );
 
   const layout = useMemo(
     () => computeGridLayout(photos.length),
@@ -332,6 +465,12 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
       const isMinus = gamepad.buttons[Button.Minus].pressed;
+      const isX = gamepad.buttons[Button.X].pressed;
+
+      if (deleteConfirmOpenRef.current) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
 
       if (previewIndexRef.current !== null) {
         rafId = requestAnimationFrame(loop);
@@ -346,7 +485,8 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           !isRight &&
           !isA &&
           !isB &&
-          !isMinus
+          !isMinus &&
+          !isX
         ) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = {
@@ -406,8 +546,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
         }
       } else if (photos.length > 0) {
         const atFirstRow =
-          highlightedIndex === HIGHLIGHT_NONE ||
-          highlightedIndex < GRID_COLS;
+          highlightedIndex === HIGHLIGHT_NONE || highlightedIndex < GRID_COLS;
 
         if (isUp && !buttonState.upPressed) {
           setButtonState((s) => ({ ...s, upPressed: true }));
@@ -486,6 +625,18 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
         } else if (!isA && buttonState.aPressed) {
           setButtonState((s) => ({ ...s, aPressed: false }));
         }
+
+        if (
+          isX &&
+          !buttonState.xPressed &&
+          focusArea === "grid" &&
+          highlightedIndex !== HIGHLIGHT_NONE
+        ) {
+          setButtonState((s) => ({ ...s, xPressed: true }));
+          openDeleteConfirm();
+        } else if (!isX && buttonState.xPressed) {
+          setButtonState((s) => ({ ...s, xPressed: false }));
+        }
       } else if (focusArea === "grid" && photos.length === 0) {
         if (isUp && !buttonState.upPressed) {
           setButtonState((s) => ({ ...s, upPressed: true }));
@@ -519,7 +670,15 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [buttonState, focusArea, highlightedIndex, layout, onClose, photos]);
+  }, [
+    buttonState,
+    focusArea,
+    highlightedIndex,
+    layout,
+    onClose,
+    openDeleteConfirm,
+    photos,
+  ]);
 
   const contentTop = HEADER_LAYOUT.contentTop;
   const showScrollbar = layout !== null && layout.maxScrollRow > 0;
@@ -545,7 +704,7 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
       onRightActionTouchStart={onClose}
       onRightActionMouseEnter={() => setFocusArea("close")}
       onRightActionMouseLeave={() => setFocusArea("grid")}
-      footerHint="↑↓←→  Move   A  View      B / −  Back"
+      footerHint="A  View      B / −  Back      X  Delete"
     >
       {!ready && (
         <Text
@@ -702,7 +861,23 @@ export function AlbumPage({ onClose }: AlbumPageProps) {
           previewIndex !== null ? (photos[previewIndex]?.src ?? null) : null
         }
         showLoadingHint={previewFullLoading}
+        hasPrev={previewIndex !== null && previewIndex > 0}
+        hasNext={previewIndex !== null && previewIndex < photos.length - 1}
+        onStepPreview={stepPreview}
+        onRequestDelete={openDeleteConfirm}
         onClose={() => setPreviewIndex(null)}
+        suspendGamepad={deleteConfirmOpen}
+      />
+
+      <Modal
+        visible={deleteConfirmOpen}
+        title="Delete this picture?"
+        description="This will permanently remove this file from your album. Are you sure?"
+        onClose={closeDeleteConfirm}
+        actions={deleteModalActions}
+        initialActionIndex={0}
+        maxPanelHeight={300}
+        maxPanelWidth={720}
       />
     </HeaderLayout>
   );

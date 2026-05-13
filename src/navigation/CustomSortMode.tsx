@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
@@ -486,7 +486,7 @@ export function CustomSortMode({
           const iconBottom = iconRenderY + iconH;
 
           return (
-            <React.Fragment key={app.id.toString()}>
+            <Fragment key={app.id.toString()}>
               {isHeld && (
                 <Rect
                   x={renderX - 6}
@@ -538,7 +538,7 @@ export function CustomSortMode({
               >
                 {truncate(app.name, 17)}
               </Text>
-            </React.Fragment>
+            </Fragment>
           );
         })}
 

@@ -3,7 +3,8 @@ import { Image, Rect } from "react-tela";
 import { AppData } from "../types/AppData";
 import { truncate } from "../lib/truncate";
 import { AppIcon } from "../components/AppIcon";
-import { AppDetailsPane } from "../components/AppDetailsPane";
+import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
+import { Modal } from "../components/Modal";
 import { Navigation } from "../components/Navigation";
 import { AlbumPage } from "./AlbumPage";
 import { CustomSortMode } from "./CustomSortMode";
@@ -364,7 +365,16 @@ export function GridHome() {
       />
 
       {detailsApp && (
-        <AppDetailsPane app={detailsApp} onClose={() => setDetailsApp(null)} />
+        <Modal
+          visible
+          title="Application details"
+          onClose={() => setDetailsApp(null)}
+          maxPanelHeight={340}
+        >
+          {(layout) => (
+            <ApplicationDetailsContent app={detailsApp} layout={layout} />
+          )}
+        </Modal>
       )}
     </>
   );

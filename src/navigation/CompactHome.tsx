@@ -6,7 +6,8 @@ import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
 import { COLORS } from "../lib/colors";
 import { List } from "../components/List";
-import { AppDetailsPane } from "../components/AppDetailsPane";
+import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
+import { Modal } from "../components/Modal";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import type { ListElementModel } from "../components/ListElement";
 import {
@@ -422,7 +423,16 @@ export function CompactHome() {
       )}
 
       {detailsApp && (
-        <AppDetailsPane app={detailsApp} onClose={() => setDetailsApp(null)} />
+        <Modal
+          visible
+          title="Application details"
+          onClose={() => setDetailsApp(null)}
+          maxPanelHeight={340}
+        >
+          {(layout) => (
+            <ApplicationDetailsContent app={detailsApp} layout={layout} />
+          )}
+        </Modal>
       )}
     </HeaderLayout>
   );
