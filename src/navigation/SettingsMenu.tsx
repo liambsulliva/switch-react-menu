@@ -23,6 +23,7 @@ interface ButtonState {
   rightPressed: boolean;
   aPressed: boolean;
   bPressed: boolean;
+  minusPressed: boolean;
 }
 
 interface HoldRepeatState {
@@ -157,6 +158,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
     rightPressed: false,
     aPressed: false,
     bPressed: false,
+    minusPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({
     up: null,
@@ -230,9 +232,10 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
         (Math.abs(gamepad.axes[0]) > 0.5 && gamepad.axes[0] > 0.5);
       const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
+      const isMinus = gamepad.buttons[Button.Minus].pressed;
 
       if (!gamepadArmedRef.current) {
-        if (!isA && !isB && !isUp && !isDown && !isLeft && !isRight) {
+        if (!isA && !isB && !isMinus && !isUp && !isDown && !isLeft && !isRight) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = { up: null, down: null, left: null };
         }
@@ -339,6 +342,13 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
         setButtonState((prev) => ({ ...prev, bPressed: false }));
       }
 
+      if (isMinus && !buttonState.minusPressed) {
+        setButtonState((prev) => ({ ...prev, minusPressed: true }));
+        onClose();
+      } else if (!isMinus && buttonState.minusPressed) {
+        setButtonState((prev) => ({ ...prev, minusPressed: false }));
+      }
+
       rafId = requestAnimationFrame(loop);
     };
 
@@ -376,7 +386,7 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
       onRightActionTouchStart={onClose}
       onRightActionMouseEnter={() => setFocusArea("back")}
       onRightActionMouseLeave={() => setFocusArea("list")}
-      footerHint="A  Select      B  Back"
+      footerHint="A  Select      B / −  Back"
     >
       <List
         x={HEADER_LAYOUT.paddingX}

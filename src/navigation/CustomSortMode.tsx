@@ -159,6 +159,7 @@ export function CustomSortMode({
     downPressed: false,
     aPressed: false,
     bPressed: false,
+    minusPressed: false,
     plusPressed: false,
   });
   const holdRepeatRef = useRef<{
@@ -256,6 +257,7 @@ export function CustomSortMode({
         (Math.abs(gamepad.axes[1]) > 0.5 && gamepad.axes[1] > 0.5);
       const isA = gamepad.buttons[Button.A].pressed;
       const isB = gamepad.buttons[Button.B].pressed;
+      const isMinus = gamepad.buttons[Button.Minus].pressed;
       const isPlus = gamepad.buttons[Button.Plus].pressed;
 
       if (!gamepadArmedRef.current) {
@@ -266,6 +268,7 @@ export function CustomSortMode({
           !isDown &&
           !isA &&
           !isB &&
+          !isMinus &&
           !isPlus
         ) {
           gamepadArmedRef.current = true;
@@ -356,8 +359,7 @@ export function CustomSortMode({
         setBtnState((prev) => ({ ...prev, aPressed: false }));
       }
 
-      if (isB && !btnState.bPressed) {
-        setBtnState((prev) => ({ ...prev, bPressed: true }));
+      const applyExitOrCancelDrag = () => {
         if (isHolding) {
           const heldId = order[selectedIndex];
           setOrder(cancelSnapshot);
@@ -370,8 +372,20 @@ export function CustomSortMode({
         } else {
           onCancel();
         }
+      };
+
+      if (isB && !btnState.bPressed) {
+        setBtnState((prev) => ({ ...prev, bPressed: true }));
+        applyExitOrCancelDrag();
       } else if (!isB && btnState.bPressed) {
         setBtnState((prev) => ({ ...prev, bPressed: false }));
+      }
+
+      if (isMinus && !btnState.minusPressed) {
+        setBtnState((prev) => ({ ...prev, minusPressed: true }));
+        applyExitOrCancelDrag();
+      } else if (!isMinus && btnState.minusPressed) {
+        setBtnState((prev) => ({ ...prev, minusPressed: false }));
       }
 
       if (isPlus && !btnState.plusPressed) {
@@ -414,8 +428,8 @@ export function CustomSortMode({
     const scrollX = Math.max(0, Math.min(idealScrollX, maxScrollX));
 
     const legendText = isHolding
-      ? "A  Drop      B  Cancel Move"
-      : "A  Pick Up        B  Exit      +  Save";
+      ? "A  Drop      B / −  Cancel Move"
+      : "A  Pick Up      B / −  Exit      +  Save";
 
     return (
       <>
@@ -572,8 +586,8 @@ export function CustomSortMode({
     [orderedApps, selectedIndex, isHolding],
   );
   const legendTextCompact = isHolding
-    ? "A  Drop      B  Cancel Move"
-    : "A  Pick Up      B  Exit      +  Save";
+    ? "A  Drop      B / −  Cancel Move"
+    : "A  Pick Up      B / −  Exit      +  Save";
 
   return (
     <>
