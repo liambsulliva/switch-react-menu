@@ -20,6 +20,7 @@ import {
   getCachedIconHeroRgbPair,
   renderHeroGradientObjectUrl,
 } from "../lib/iconHeroGradientPalette";
+import { getBrowserDocument } from "../browser/dom";
 
 const heroSplashIconUrlCache = new Map<string, string>();
 
@@ -78,13 +79,14 @@ export type HeroSplashProps = {
   panT: number;
   app: Switch.Application;
   fetchState: HeroSplashInlineFetchState;
-  /** When `"trailers"`, the trailer row shows a gamepad selection ring. */
   heroInlineSubFocus?: HeroSplashInlineSubFocus;
-  /** Index of the highlighted trailer when `heroInlineSubFocus === "trailers"`. */
   heroTrailerIndex?: number;
 };
 
 const IMAGE_EXTRA = 1.55;
+
+// nx.js `Text` metrics differ from browser canvas... nudge title up a tad on bare-metal hardware.
+const HERO_TITLE_Y_BARE_METAL_NUDGE = -6;
 
 export function HeroSplash({
   panT,
@@ -176,7 +178,11 @@ export function HeroSplash({
   const textW = screen.width - textX - padding;
   const charsPerLine = Math.max(20, Math.floor(textW / 10));
 
-  const yTitle = heroTop + padding;
+  const yTitleRow = heroTop + padding;
+  const isBrowserPolyfillPreview = getBrowserDocument() !== undefined;
+  const yTitle =
+    yTitleRow +
+    (isBrowserPolyfillPreview ? 0 : HERO_TITLE_Y_BARE_METAL_NUDGE);
 
   const heroTags =
     state.status === "ok" && state.data?.tags?.length ? state.data.tags : [];
@@ -263,11 +269,11 @@ export function HeroSplash({
     return { items, blockH };
   }, [heroTags, textX, textW]);
 
-  const yTagsBase = yTitle + 30;
+  const yTagsBase = yTitleRow + 30;
   const yLine2 =
     badgeLayout.items.length > 0
       ? yTagsBase + badgeLayout.blockH + 8
-      : yTitle + 34;
+      : yTitleRow + 34;
   const summaryStartY =
     state.status === "ok" && state.data !== null ? yLine2 + 26 : yLine2 + 6;
   const maxSummaryLines = Math.max(
@@ -333,14 +339,14 @@ export function HeroSplash({
         <Image
           src={squareIconSrc}
           x={padding}
-          y={heroTop + padding}
+          y={yTitleRow}
           width={iconTile}
           height={iconTile}
         />
       ) : (
         <Rect
           x={padding}
-          y={heroTop + padding}
+          y={yTitleRow}
           width={iconTile}
           height={iconTile}
           fill={COLORS.gray[700]}
