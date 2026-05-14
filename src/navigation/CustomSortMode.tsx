@@ -3,6 +3,10 @@ import { Image, Rect, Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
 import { COLORS } from "../lib/colors";
+import {
+  toggleHiddenGameId,
+  useHiddenGameIdSet,
+} from "../settings/hiddenGamesStore";
 import { List } from "../components/List";
 import type { ListElementModel } from "../components/ListElement";
 
@@ -161,7 +165,9 @@ export function CustomSortMode({
     bPressed: false,
     minusPressed: false,
     plusPressed: false,
+    xPressed: false,
   });
+  const hiddenGameIds = useHiddenGameIdSet();
   const holdRepeatRef = useRef<{
     left: number | null;
     right: number | null;
@@ -259,6 +265,7 @@ export function CustomSortMode({
       const isB = gamepad.buttons[Button.B].pressed;
       const isMinus = gamepad.buttons[Button.Minus].pressed;
       const isPlus = gamepad.buttons[Button.Plus].pressed;
+      const isX = gamepad.buttons[Button.X].pressed;
 
       if (!gamepadArmedRef.current) {
         if (
@@ -269,7 +276,8 @@ export function CustomSortMode({
           !isA &&
           !isB &&
           !isMinus &&
-          !isPlus
+          !isPlus &&
+          !isX
         ) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = {
@@ -395,6 +403,16 @@ export function CustomSortMode({
         setBtnState((prev) => ({ ...prev, plusPressed: false }));
       }
 
+      if (isX && !btnState.xPressed) {
+        setBtnState((prev) => ({ ...prev, xPressed: true }));
+        if (!isHolding && appCount > 0) {
+          const id = order[selectedIndex];
+          if (id) toggleHiddenGameId(id);
+        }
+      } else if (!isX && btnState.xPressed) {
+        setBtnState((prev) => ({ ...prev, xPressed: false }));
+      }
+
       rafId = requestAnimationFrame(loop);
     };
 
@@ -429,7 +447,7 @@ export function CustomSortMode({
 
     const legendText = isHolding
       ? "A  Drop      B / −  Cancel Move"
-      : "A  Pick Up      B / −  Exit      +  Save";
+      : "A  Pick Up      X  Hide      B / −  Exit      +  Save";
 
     return (
       <>
@@ -482,6 +500,7 @@ export function CustomSortMode({
 
           const isSelected = i === selectedIndex;
           const isHeld = isSelected && isHolding;
+          const isHidden = hiddenGameIds.has(app.id.toString());
           const iconRenderY = isHeld ? iconBaseY - HELD_LIFT : iconBaseY;
           const iconBottom = iconRenderY + iconH;
 
@@ -497,6 +516,19 @@ export function CustomSortMode({
                 />
               )}
 
+              {isHidden && !isSelected && (
+                <Rect
+                  x={renderX - 5}
+                  y={iconRenderY - 5}
+                  width={iconW + 10}
+                  height={iconH + 10}
+                  fill="none"
+                  stroke={COLORS.gray[500]}
+                  lineWidth={3}
+                  lineDash={[12, 10]}
+                />
+              )}
+
               {isSelected && (
                 <Rect
                   x={renderX - 5}
@@ -506,6 +538,7 @@ export function CustomSortMode({
                   fill="none"
                   stroke={isHeld ? COLORS.accent : COLORS.gray[0]}
                   lineWidth={5}
+                  lineDash={isHidden ? [14, 12] : undefined}
                 />
               )}
 
@@ -570,6 +603,7 @@ export function CustomSortMode({
       orderedApps.map((app, index) => {
         const isSelected = index === selectedIndex;
         const isHeld = isSelected && isHolding;
+        const isHidden = hiddenGameIds.has(app.id.toString());
         return {
           id: app.id.toString(),
           label: truncate(app.name, 38),
@@ -581,13 +615,14 @@ export function CustomSortMode({
               : COLORS.gray[0]
             : COLORS.gray[100],
           rowSelectedFill: isHeld ? COLORS.rowSelectedBg : COLORS.rowSelected,
+          rowDashedOutline: isHidden,
         };
       }),
-    [orderedApps, selectedIndex, isHolding],
+    [orderedApps, selectedIndex, isHolding, hiddenGameIds],
   );
   const legendTextCompact = isHolding
     ? "A  Drop      B / −  Cancel Move"
-    : "A  Pick Up      B / −  Exit      +  Save";
+    : "A  Pick Up      X  Hide      B / −  Exit      +  Save";
 
   return (
     <>

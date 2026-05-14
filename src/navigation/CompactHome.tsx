@@ -16,6 +16,7 @@ import {
 } from "../settings/lastPlayedStore";
 import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
+import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 
 const ROW_HEIGHT = 84;
 const listHeight =
@@ -64,6 +65,7 @@ function ensureVisible(index: number, offset: number): number {
 export function CompactHome() {
   const settings = useSettings();
   const customOrder = useCustomOrder();
+  const hiddenGameIds = useHiddenGameIdSet();
   const lastPlayedId = useLastPlayedApplicationId();
   const [apps, setApps] = useState<Switch.Application[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -121,11 +123,17 @@ export function CompactHome() {
     return apps;
   }, [apps, settings.alphabeticalSort, customOrder]);
 
-  const appCount = sortedApps.length;
+  const visibleSortedApps = useMemo(
+    () =>
+      sortedApps.filter((app) => !hiddenGameIds.has(app.id.toString())),
+    [sortedApps, hiddenGameIds],
+  );
+
+  const appCount = visibleSortedApps.length;
 
   const listItems = useMemo<ListElementModel[]>(
     () =>
-      sortedApps.map((app, index) => {
+      visibleSortedApps.map((app, index) => {
         const isSelected = focusArea === "apps" && index === selectedIndex;
         const isLastPlayed =
           settings.showLastPlayed &&
@@ -142,7 +150,7 @@ export function CompactHome() {
         };
       }),
     [
-      sortedApps,
+      visibleSortedApps,
       focusArea,
       selectedIndex,
       settings.showLastPlayed,
@@ -189,7 +197,7 @@ export function CompactHome() {
     };
 
     const launchSelected = () => {
-      const app = sortedApps[selectedIndex];
+      const app = visibleSortedApps[selectedIndex];
       if (!app) return;
       recordLastPlayed(app);
       app.launch();
@@ -321,7 +329,7 @@ export function CompactHome() {
       if (isMinus && !buttonState.minusPressed) {
         setButtonState((prev) => ({ ...prev, minusPressed: true }));
         if (focusArea === "apps") {
-          const app = sortedApps[selectedIndex];
+          const app = visibleSortedApps[selectedIndex];
           if (app) setDetailsApp(app);
         }
       } else if (!isMinus && buttonState.minusPressed) {
@@ -335,7 +343,7 @@ export function CompactHome() {
     return () => cancelAnimationFrame(rafId);
   }, [
     buttonState,
-    sortedApps,
+    visibleSortedApps,
     selectedIndex,
     focusArea,
     appCount,
@@ -395,7 +403,7 @@ export function CompactHome() {
         isFocused={focusArea === "apps"}
         scrollOffset={scrollOffset}
         onItemTouchStart={(absoluteIndex) => {
-          const app = sortedApps[absoluteIndex];
+          const app = visibleSortedApps[absoluteIndex];
           if (!app) return;
           setFocusArea("apps");
           if (selectedIndex !== absoluteIndex) {

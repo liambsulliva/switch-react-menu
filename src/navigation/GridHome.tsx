@@ -25,6 +25,7 @@ import {
 } from "../settings/lastPlayedStore";
 import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
+import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
 
 const GRID_HOME_WEB_APPLET_URL = "https://google.com";
@@ -39,6 +40,7 @@ function openSwitchWebApplet(url: string = GRID_HOME_WEB_APPLET_URL) {
 export function GridHome() {
   const settings = useSettings();
   const customOrder = useCustomOrder();
+  const hiddenGameIds = useHiddenGameIdSet();
   const lastPlayedId = useLastPlayedApplicationId();
   const [rawApps, setRawApps] = useState<AppData[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -70,7 +72,7 @@ export function GridHome() {
   );
   const gap = 48;
 
-  const apps = useMemo(() => {
+  const sortedRawApps = useMemo(() => {
     if (settings.alphabeticalSort) {
       return [...rawApps].sort((a, b) =>
         a.app.name.localeCompare(b.app.name, undefined, {
@@ -88,6 +90,14 @@ export function GridHome() {
     }
     return rawApps;
   }, [rawApps, settings.alphabeticalSort, customOrder]);
+
+  const apps = useMemo(
+    () =>
+      sortedRawApps.filter(
+        (a) => !hiddenGameIds.has(a.app.id.toString()),
+      ),
+    [sortedRawApps, hiddenGameIds],
+  );
 
   const calculateItemsPerPage = (firstItemWidth: number) => {
     return Math.floor((screen.width - gap) / (firstItemWidth + gap));
@@ -277,7 +287,7 @@ export function GridHome() {
   if (showCustomSort) {
     return (
       <CustomSortMode
-        apps={apps.map((a) => a.app)}
+        apps={sortedRawApps.map((a) => a.app)}
         compact={false}
         onDone={(newOrder) => {
           setCustomOrder(newOrder);

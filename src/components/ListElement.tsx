@@ -16,6 +16,7 @@ export interface ListElementModel {
   gameEyebrow?: string;
   valueColorOverride?: string;
   rowSelectedFill?: string;
+  rowDashedOutline?: boolean;
 }
 
 interface ListElementProps extends ListElementModel {
@@ -50,6 +51,7 @@ export function ListElement({
   gameEyebrow,
   valueColorOverride,
   rowSelectedFill,
+  rowDashedOutline,
   onTouchStart,
   onMouseEnter,
 }: ListElementProps) {
@@ -75,6 +77,18 @@ export function ListElement({
     <>
       {isSelected && !disabled && (
         <Rect x={x} y={y} width={width} height={height} fill={selectedFill} />
+      )}
+      {rowDashedOutline && (
+        <Rect
+          x={x + 2}
+          y={y + 2}
+          width={width - 4}
+          height={height - 4}
+          fill="none"
+          stroke={isSelected ? COLORS.gray[0] : COLORS.gray[500]}
+          lineWidth={2}
+          lineDash={[10, 8]}
+        />
       )}
       <Rect
         x={x}
