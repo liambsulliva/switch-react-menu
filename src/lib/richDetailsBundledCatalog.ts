@@ -451,3 +451,11 @@ export function peekInstalledRichMatch(
 ): RichGameDetails | null {
   return installedMatchesByAppId.get(applicationId) ?? null;
 }
+
+export function setInstalledRichMatch(
+  applicationId: string,
+  details: RichGameDetails | null,
+): void {
+  installedMatchesByAppId.set(applicationId, details);
+  bumpInstalledTitlesRevision();
+}

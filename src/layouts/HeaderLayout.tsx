@@ -1,10 +1,5 @@
 import React from "react";
 import { Rect, Text } from "react-tela";
-import {
-  DigitalClock,
-  TOP_RIGHT_CLOCK_PUSH_PX,
-  TOP_RIGHT_CLOCK_SCREEN_INSET_PX,
-} from "../components/Clock";
 import { COLORS } from "../lib/colors";
 
 export const HEADER_LAYOUT = {
@@ -57,43 +52,23 @@ export function HeaderLayout({
         {title}
       </Text>
 
-      <DigitalClock
-        x={
-          screen.width -
-          HEADER_LAYOUT.paddingX -
-          TOP_RIGHT_CLOCK_SCREEN_INSET_PX
-        }
-        y={80}
-        fontSize={26}
-      />
-
       {rightActionLabel && (
         <>
           <Text
-            x={
-              screen.width -
-              HEADER_LAYOUT.paddingX -
-              60 -
-              TOP_RIGHT_CLOCK_PUSH_PX
-            }
+            x={screen.width - HEADER_LAYOUT.paddingX}
             y={80}
             fill={rightActionActive ? COLORS.gray[0] : COLORS.gray[400]}
             fontSize={rightActionActive ? 26 : 24}
             fontFamily={
               rightActionActive ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
             }
-            textAlign="center"
+            textAlign="right"
             textBaseline="middle"
           >
             {rightActionLabel}
           </Text>
           <Rect
-            x={
-              screen.width -
-              HEADER_LAYOUT.paddingX -
-              120 -
-              TOP_RIGHT_CLOCK_PUSH_PX
-            }
+            x={screen.width - HEADER_LAYOUT.paddingX - 120}
             y={50}
             width={120}
             height={60}

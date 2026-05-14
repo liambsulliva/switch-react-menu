@@ -4,12 +4,15 @@ import {
   Badge,
   computeBadgeMetrics,
   estimateBadgeOuterWidth,
-  type BadgeVariant,
-} from "./Badge";
-import { Button } from "./Button";
+} from "../components/Badge";
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
 import { COLORS } from "../lib/colors";
 import type { HeroSplashInlineFetchState } from "../hooks/useHeroSplashInlineExperience";
-import type { HeroSplashInlineSubFocus } from "../hooks/useGamepadNavigation";
+import {
+  HERO_TRAILER_GRID_MAX_CARDS,
+  type HeroSplashInlineSubFocus,
+} from "../hooks/useGamepadNavigation";
 import {
   formatRichReleaseDate,
   type RichTrailer,
@@ -81,10 +84,29 @@ export type HeroSplashProps = {
   fetchState: HeroSplashInlineFetchState;
   heroInlineSubFocus?: HeroSplashInlineSubFocus;
   heroTrailerIndex?: number;
+  heroActionIndex?: number;
+  onPlayGame: () => void;
+  onEditInfo: () => void;
 };
 
 const IMAGE_EXTRA = 1.55;
 const HERO_INLINE_CONTENT_DROP_PX = 10;
+
+const HERO_TAG_PILL_FILL = COLORS.gray[900];
+const HERO_TAG_TEXT_FILL = COLORS.gray[0];
+
+const HERO_BTN_IDLE = COLORS.gray[900];
+
+function cardAccentRgb(i: number): { r: number; g: number; b: number } {
+  const hues = [
+    { r: 42, g: 118, b: 210 },
+    { r: 120, g: 72, b: 198 },
+    { r: 32, g: 150, b: 140 },
+    { r: 198, g: 92, b: 62 },
+    { r: 72, g: 110, b: 190 },
+  ];
+  return hues[i % hues.length]!;
+}
 
 // nx.js `Text` metrics differ from browser canvas... nudge title up a tad on bare-metal hardware.
 const HERO_TITLE_Y_BARE_METAL_NUDGE = -6;
@@ -95,9 +117,13 @@ export function HeroSplash({
   fetchState,
   heroInlineSubFocus = "content",
   heroTrailerIndex = 0,
+  heroActionIndex = 0,
+  onPlayGame,
+  onEditInfo,
 }: HeroSplashProps) {
   const pan = Math.max(0, Math.min(1, panT));
-  const HERO_H = Math.min(screen.height - 48, Math.floor(screen.height * 0.56));
+  const HERO_H =
+    Math.min(screen.height - 48, Math.floor(screen.height * 0.56)) - 10;
   const finalTop = screen.height - HERO_H;
   const slideDistance = Math.floor(HERO_H * 0.95 + 100);
   const heroTop = Math.round(finalTop + (1 - pan) * slideDistance);
@@ -173,17 +199,29 @@ export function HeroSplash({
       : null;
 
   const padding = 18;
-  /** Square tile matching grid `AppIcon` aspect (not portrait cover art). */
   const iconTile = 96;
   const textX = padding + iconTile + 16;
-  const textW = screen.width - textX - padding;
+  const midGap = 20;
+  const minCardLane = 2 * 64 + 12;
+  const trailersForLayout: RichTrailer[] =
+    state.status === "ok" && state.data?.trailers ? state.data.trailers : [];
+  const hasAssetCards = trailersForLayout.length > 0;
+  const midWidth = screen.width - textX - padding;
+  const maxLeftBody = midWidth - minCardLane - midGap;
+  const preferredLeft = Math.floor(midWidth * 0.52) - Math.floor(midGap / 2);
+  const textW = hasAssetCards
+    ? Math.max(160, Math.min(Math.max(preferredLeft, 200), maxLeftBody))
+    : midWidth;
+  const cardsColumnX = hasAssetCards ? textX + textW + midGap : 0;
+  const cardsPanelW = hasAssetCards
+    ? Math.max(0, screen.width - padding - cardsColumnX)
+    : 0;
   const charsPerLine = Math.max(20, Math.floor(textW / 10));
 
   const yTitleRow = heroTop + padding + HERO_INLINE_CONTENT_DROP_PX;
   const isBrowserPolyfillPreview = getBrowserDocument() !== undefined;
   const yTitle =
-    yTitleRow +
-    (isBrowserPolyfillPreview ? 0 : HERO_TITLE_Y_BARE_METAL_NUDGE);
+    yTitleRow + (isBrowserPolyfillPreview ? 0 : HERO_TITLE_Y_BARE_METAL_NUDGE);
 
   const heroTags =
     state.status === "ok" && state.data?.tags?.length ? state.data.tags : [];
@@ -201,7 +239,6 @@ export function HeroSplash({
     const rowGap = 6;
     const maxRight = textX + textW;
     const maxRows = 2;
-    const variants: BadgeVariant[] = ["default", "muted", "accent"];
     if (heroTags.length === 0) {
       return {
         items: [] as Array<{
@@ -209,7 +246,6 @@ export function HeroSplash({
           x: number;
           y: number;
           label: string;
-          variant: BadgeVariant;
         }>,
         blockH: 0,
       };
@@ -231,22 +267,16 @@ export function HeroSplash({
       x: number;
       y: number;
       label: string;
-      variant: BadgeVariant;
     }> = [];
 
-    const place = (
-      key: string,
-      label: string,
-      w: number,
-      variant: BadgeVariant,
-    ): boolean => {
+    const place = (key: string, label: string, w: number): boolean => {
       if (cx + w > maxRight && cx > textX) {
         row += 1;
         if (row >= maxRows) return false;
         cx = textX;
         cy += ROW_H + rowGap;
       }
-      items.push({ key, x: cx, y: cy, label, variant });
+      items.push({ key, x: cx, y: cy, label });
       cx += w + pad;
       return true;
     };
@@ -258,11 +288,11 @@ export function HeroSplash({
         padX: 10,
         maxLabelChars: 18,
       });
-      if (!place(`tag-${i}`, label, w, variants[items.length % 3]!)) break;
+      if (!place(`tag-${i}`, label, w)) break;
     }
 
     if (truncated) {
-      place("tag-more", ellipsisLabel, ellipsisW, "muted");
+      place("tag-more", ellipsisLabel, ellipsisW);
     }
 
     const blockH =
@@ -286,35 +316,31 @@ export function HeroSplash({
     state.status === "ok" && state.data?.summary
       ? wrapSummary(state.data.summary, charsPerLine, maxSummaryLines)
       : [];
-  const trailers: RichTrailer[] =
-    state.status === "ok" && state.data?.trailers ? state.data.trailers : [];
+  const trailers: RichTrailer[] = trailersForLayout.slice(
+    0,
+    HERO_TRAILER_GRID_MAX_CARDS,
+  );
 
-  const trailerBtnH = 38;
-  const trailerBtnGap = 10;
-  const trailerBlockTop =
+  const actionBtnH = 40;
+  const actionGap = 12;
+  const actionsRowTop =
     summaryStartY +
     summaryLines.length * 20 +
     (summaryLines.length > 0 ? 14 : 8);
+  const cardsColGap = 12;
+  const cardsRowGap = 12;
+  const cardH = 110;
+  const cardW = hasAssetCards
+    ? Math.max(64, Math.floor((cardsPanelW - cardsColGap) / 2))
+    : 0;
+  /** Top-align asset column with the title row so cards sit beside the headline block. */
+  const cardsGridTop = yTitleRow;
 
-  const trailerRowLayout = useMemo(() => {
-    const n = trailers.length;
-    if (n === 0) return null;
-    const fixedW = 168;
-    const totalFixed = n * fixedW + (n - 1) * trailerBtnGap;
-    let btnW: number;
-    let rowScroll = 0;
-    if (totalFixed <= textW) {
-      btnW = (textW - (n - 1) * trailerBtnGap) / n;
-    } else {
-      btnW = fixedW;
-      const rowW = n * btnW + (n - 1) * trailerBtnGap;
-      const maxScroll = Math.max(0, rowW - textW);
-      const focusLeft = heroTrailerIndex * (btnW + trailerBtnGap);
-      const idealScroll = focusLeft + btnW / 2 - textW / 2;
-      rowScroll = Math.max(0, Math.min(idealScroll, maxScroll));
-    }
-    return { btnW, rowScroll };
-  }, [trailers, textW, heroTrailerIndex, trailerBtnGap]);
+  const actionBtnW = (textW - actionGap) / 2;
+  const actionPlayHighlighted =
+    heroInlineSubFocus === "actions" && heroActionIndex === 0;
+  const actionInfoHighlighted =
+    heroInlineSubFocus === "actions" && heroActionIndex === 1;
 
   return (
     <>
@@ -372,8 +398,8 @@ export function HeroSplash({
           x={b.x}
           y={yTagsBase + b.y}
           label={b.label}
-          variant={b.variant}
           maxLabelChars={18}
+          style={{ fill: HERO_TAG_PILL_FILL, textFill: HERO_TAG_TEXT_FILL }}
         />
       ))}
 
@@ -459,15 +485,35 @@ export function HeroSplash({
               No description in the DB for this search.
             </Text>
           )}
+          <Button
+            x={textX}
+            y={actionsRowTop}
+            width={actionBtnW}
+            height={actionBtnH}
+            label="Play Game"
+            isHighlighted={actionPlayHighlighted}
+            fill={actionPlayHighlighted ? COLORS.rowSelectedBg : HERO_BTN_IDLE}
+            labelFill={COLORS.gray[0]}
+            onPress={onPlayGame}
+          />
+          <Button
+            x={textX + actionBtnW + actionGap}
+            y={actionsRowTop}
+            width={actionBtnW}
+            height={actionBtnH}
+            label="Edit Info"
+            isHighlighted={actionInfoHighlighted}
+            fill={actionInfoHighlighted ? COLORS.rowSelectedBg : HERO_BTN_IDLE}
+            labelFill={COLORS.gray[0]}
+            onPress={onEditInfo}
+          />
           {trailers.length > 0 &&
-            trailerRowLayout &&
             trailers.map((t, i) => {
-              const { btnW, rowScroll } = trailerRowLayout;
-              const bx = textX + i * (btnW + trailerBtnGap) - rowScroll;
-              if (bx + btnW < textX - 2 || bx > textX + textW + 2) {
-                return null;
-              }
-              const labelMax = Math.max(6, Math.floor((btnW - 24) / 9));
+              const col = i % 2;
+              const row = Math.floor(i / 2);
+              const cx = cardsColumnX + col * (cardW + cardsColGap);
+              const cy = cardsGridTop + row * (cardH + cardsRowGap);
+              const labelMax = Math.max(8, Math.floor((cardW - 16) / 8));
               const label = truncateEnd(
                 t.name?.trim() || "Watch trailer",
                 labelMax,
@@ -475,14 +521,15 @@ export function HeroSplash({
               const highlighted =
                 heroInlineSubFocus === "trailers" && i === heroTrailerIndex;
               return (
-                <Button
+                <Card
                   key={`tr-${t.youtubeId}-${i}`}
-                  x={bx}
-                  y={trailerBlockTop}
-                  width={btnW}
-                  height={trailerBtnH}
-                  label={label}
+                  x={cx}
+                  y={cy}
+                  width={cardW}
+                  height={cardH}
+                  title={label}
                   isHighlighted={highlighted}
+                  accentRgb={cardAccentRgb(i)}
                   onPress={() => openSwitchWebApplet(richTrailerWatchUrl(t))}
                 />
               );

@@ -11,7 +11,7 @@ export type GridHomeFocusArea =
   | "search"
   | "searchInput";
 
-export type HeroSplashInlineSubFocus = "content" | "trailers";
+export type HeroSplashInlineSubFocus = "content" | "actions" | "trailers";
 
 interface GamepadNavigationProps {
   apps: Switch.Application[];
@@ -26,15 +26,11 @@ interface GamepadNavigationProps {
   setNavButtonIndex: (cb: (prev: number) => number) => void;
   isActive?: boolean;
   onOpenSettings?: () => void;
-  /** Plus while search field is focused: confirm search (do not open settings). */
   onSearchSubmit?: () => void;
-  /** Minus while search icon or field is focused: cancel search and clear query. */
   onSearchCancel?: () => void;
   onOpenAlbum?: () => void;
   onOpenWebBrowser?: () => void;
-  /** A on the search icon: move focus into the search field / keyboard. */
   onActivateSearch?: () => void;
-  /** Rising edge of B (e.g. clear search text). */
   onButtonBPress?: () => void;
   onMinus?: () => void;
   replaceBottomNavWithHeroSplash?: boolean;
@@ -44,8 +40,13 @@ interface GamepadNavigationProps {
   heroInlineSubFocus?: HeroSplashInlineSubFocus;
   setHeroInlineSubFocus?: (next: HeroSplashInlineSubFocus) => void;
   heroTrailerCount?: number;
+  heroTrailerIndex?: number;
   setHeroTrailerIndex?: (update: (prev: number) => number) => void;
   onHeroTrailerActivate?: () => void;
+  heroActionIndex?: number;
+  setHeroActionIndex?: (update: (prev: number) => number) => void;
+  heroActionCount?: number;
+  onHeroActionActivate?: (index: number) => void;
 }
 
 interface GamepadState {
@@ -72,6 +73,53 @@ interface HoldRepeatState {
 
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
+
+export const HERO_TRAILER_GRID_COLS = 2;
+export const HERO_TRAILER_GRID_MAX_CARDS = 6;
+
+type SpatialTrailerMove =
+  | { type: "index"; value: number }
+  | { type: "toActions" }
+  | { type: "toContent" };
+
+function spatialMoveTrailer(
+  idx: number,
+  n: number,
+  dir: "left" | "right" | "up" | "down",
+): SpatialTrailerMove {
+  const c = HERO_TRAILER_GRID_COLS;
+  const row = Math.floor(idx / c);
+  const col = idx % c;
+
+  if (dir === "left") {
+    if (col > 0) return { type: "index", value: idx - 1 };
+    if (row === 0) return { type: "toActions" };
+    const lastRow = Math.floor((n - 1) / c);
+    if (col === 0 && row === lastRow) return { type: "toActions" };
+    const prevRight = (row - 1) * c + 1;
+    if (prevRight < n) return { type: "index", value: prevRight };
+    return { type: "index", value: (row - 1) * c };
+  }
+
+  if (dir === "right") {
+    if (col === 0 && idx + 1 < n) return { type: "index", value: idx + 1 };
+    return { type: "index", value: idx };
+  }
+
+  if (dir === "up") {
+    if (row === 0) return { type: "toContent" };
+    const up = (row - 1) * c + col;
+    if (up < n) return { type: "index", value: up };
+    return { type: "index", value: (row - 1) * c };
+  }
+
+  const down = (row + 1) * c + col;
+  if (down < n) return { type: "index", value: down };
+  const nextRowFirst = (row + 1) * c;
+  if (col === 1 && nextRowFirst < n)
+    return { type: "index", value: nextRowFirst };
+  return { type: "index", value: idx };
+}
 
 export function useGamepadNavigation({
   apps,
@@ -100,8 +148,13 @@ export function useGamepadNavigation({
   heroInlineSubFocus = "content",
   setHeroInlineSubFocus,
   heroTrailerCount = 0,
+  heroTrailerIndex = 0,
   setHeroTrailerIndex,
   onHeroTrailerActivate,
+  heroActionIndex = 0,
+  setHeroActionIndex,
+  heroActionCount = 0,
+  onHeroActionActivate,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
     shouldersPressed: { L: false, R: false },
@@ -135,10 +188,30 @@ export function useGamepadNavigation({
         replaceBottomNavWithHeroSplash &&
         inlineDetailsOpen &&
         focusArea === "apps" &&
+        heroInlineSubFocus === "actions" &&
+        heroActionCount > 0
+      ) {
+        setHeroActionIndex?.((prev) => Math.max(0, prev - 1));
+        return;
+      }
+      if (
+        replaceBottomNavWithHeroSplash &&
+        inlineDetailsOpen &&
+        focusArea === "apps" &&
         heroInlineSubFocus === "trailers" &&
         heroTrailerCount > 0
       ) {
-        setHeroTrailerIndex?.((prev) => Math.max(0, prev - 1));
+        const r = spatialMoveTrailer(
+          heroTrailerIndex,
+          heroTrailerCount,
+          "left",
+        );
+        if (r.type === "toActions") {
+          setHeroInlineSubFocus?.("actions");
+          setHeroActionIndex?.(() => 1);
+        } else if (r.type === "index") {
+          setHeroTrailerIndex?.(() => r.value);
+        }
         return;
       }
       if (focusArea === "settings") {
@@ -160,12 +233,32 @@ export function useGamepadNavigation({
         replaceBottomNavWithHeroSplash &&
         inlineDetailsOpen &&
         focusArea === "apps" &&
+        heroInlineSubFocus === "actions" &&
+        heroActionCount > 0
+      ) {
+        if (heroActionIndex === 1 && heroTrailerCount > 0) {
+          setHeroInlineSubFocus?.("trailers");
+          setHeroTrailerIndex?.(() => 0);
+          return;
+        }
+        setHeroActionIndex?.((prev) => Math.min(heroActionCount - 1, prev + 1));
+        return;
+      }
+      if (
+        replaceBottomNavWithHeroSplash &&
+        inlineDetailsOpen &&
+        focusArea === "apps" &&
         heroInlineSubFocus === "trailers" &&
         heroTrailerCount > 0
       ) {
-        setHeroTrailerIndex?.((prev) =>
-          Math.min(heroTrailerCount - 1, prev + 1),
+        const r = spatialMoveTrailer(
+          heroTrailerIndex,
+          heroTrailerCount,
+          "right",
         );
+        if (r.type === "index") {
+          setHeroTrailerIndex?.(() => r.value);
+        }
         return;
       }
       if (focusArea === "album") {
@@ -194,10 +287,7 @@ export function useGamepadNavigation({
       }
 
       // Plus: settings, except search field submits instead (default “exit” overridden).
-      if (
-        gamepad.buttons[Button.Plus].pressed &&
-        !gamepadState.plusPressed
-      ) {
+      if (gamepad.buttons[Button.Plus].pressed && !gamepadState.plusPressed) {
         setGamepadState((prev) => ({ ...prev, plusPressed: true }));
         if (focusArea === "searchInput") {
           onSearchSubmit?.();
@@ -211,10 +301,7 @@ export function useGamepadNavigation({
         setGamepadState((prev) => ({ ...prev, plusPressed: false }));
       }
 
-      if (
-        gamepad.buttons[Button.Minus].pressed &&
-        !gamepadState.minusPressed
-      ) {
+      if (gamepad.buttons[Button.Minus].pressed && !gamepadState.minusPressed) {
         setGamepadState((prev) => ({ ...prev, minusPressed: true }));
         if (focusArea === "searchInput" || focusArea === "search") {
           onSearchCancel?.();
@@ -243,7 +330,8 @@ export function useGamepadNavigation({
           !(
             replaceBottomNavWithHeroSplash &&
             inlineDetailsOpen &&
-            heroInlineSubFocus === "trailers"
+            (heroInlineSubFocus === "trailers" ||
+              heroInlineSubFocus === "actions")
           )
         ) {
           setSelectedIndex((prev) => Math.max(0, prev - jumpStep));
@@ -272,12 +360,11 @@ export function useGamepadNavigation({
           !(
             replaceBottomNavWithHeroSplash &&
             inlineDetailsOpen &&
-            heroInlineSubFocus === "trailers"
+            (heroInlineSubFocus === "trailers" ||
+              heroInlineSubFocus === "actions")
           )
         ) {
-          setSelectedIndex((prev) =>
-            Math.min(appCount - 1, prev + jumpStep),
-          );
+          setSelectedIndex((prev) => Math.min(appCount - 1, prev + jumpStep));
         }
       } else if (
         !gamepad.buttons[Button.R].pressed &&
@@ -360,7 +447,20 @@ export function useGamepadNavigation({
           focusArea === "apps" &&
           inlineDetailsOpen
         ) {
-          if (heroInlineSubFocus === "trailers") {
+          if (heroInlineSubFocus === "trailers" && heroTrailerCount > 0) {
+            const r = spatialMoveTrailer(
+              heroTrailerIndex,
+              heroTrailerCount,
+              "up",
+            );
+            if (r.type === "toContent") {
+              setHeroInlineSubFocus?.("content");
+              setHeroTrailerIndex?.(() => 0);
+              setHeroActionIndex?.(() => 0);
+            } else if (r.type === "index") {
+              setHeroTrailerIndex?.(() => r.value);
+            }
+          } else if (heroInlineSubFocus === "actions") {
             setHeroInlineSubFocus?.("content");
           } else {
             onCloseInlineDetails?.();
@@ -395,11 +495,20 @@ export function useGamepadNavigation({
           if (!inlineDetailsOpen) {
             onOpenInlineDetails?.();
           } else if (
-            heroInlineSubFocus === "content" &&
+            heroInlineSubFocus === "trailers" &&
             heroTrailerCount > 0
           ) {
-            setHeroInlineSubFocus?.("trailers");
-            setHeroTrailerIndex?.(() => 0);
+            const r = spatialMoveTrailer(
+              heroTrailerIndex,
+              heroTrailerCount,
+              "down",
+            );
+            if (r.type === "index") {
+              setHeroTrailerIndex?.(() => r.value);
+            }
+          } else if (heroInlineSubFocus === "content") {
+            setHeroInlineSubFocus?.("actions");
+            setHeroActionIndex?.(() => 0);
           }
         } else {
           setFocusArea((prev) => {
@@ -426,6 +535,13 @@ export function useGamepadNavigation({
         setGamepadState((prev) => ({ ...prev, aPressed: true }));
         if (focusArea === "apps") {
           if (
+            replaceBottomNavWithHeroSplash &&
+            inlineDetailsOpen &&
+            heroInlineSubFocus === "actions" &&
+            heroActionCount > 0
+          ) {
+            onHeroActionActivate?.(heroActionIndex);
+          } else if (
             replaceBottomNavWithHeroSplash &&
             inlineDetailsOpen &&
             heroInlineSubFocus === "trailers" &&
@@ -501,7 +617,12 @@ export function useGamepadNavigation({
     heroInlineSubFocus,
     setHeroInlineSubFocus,
     heroTrailerCount,
+    heroTrailerIndex,
     setHeroTrailerIndex,
     onHeroTrailerActivate,
+    heroActionIndex,
+    setHeroActionIndex,
+    heroActionCount,
+    onHeroActionActivate,
   ]);
 }

@@ -23,6 +23,7 @@ import {
   getSettingsCogPng,
 } from "../lib/iconPng";
 import {
+  HERO_TRAILER_GRID_MAX_CARDS,
   useGamepadNavigation,
   type GridHomeFocusArea,
   type HeroSplashInlineSubFocus,
@@ -46,7 +47,8 @@ import {
   TOP_RIGHT_CLOCK_PUSH_PX,
   TOP_RIGHT_CLOCK_SCREEN_INSET_PX,
 } from "../components/Clock";
-import { HeroSplash } from "../components/HeroSplash";
+import { HeroSplash } from "./HeroSplashPage";
+import { EditApp } from "./EditAppPage";
 import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
 import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
 import { easeOutDetailEntrance } from "../lib/easing";
@@ -79,10 +81,13 @@ export function GridHome() {
   const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
   const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
+  const [editRichDetailsApp, setEditRichDetailsApp] =
+    useState<Switch.Application | null>(null);
   const [heroSplashInlineOpen, setHeroSplashInlineOpen] = useState(false);
   const [heroInlineSubFocus, setHeroInlineSubFocus] =
     useState<HeroSplashInlineSubFocus>("content");
   const [heroTrailerIndex, setHeroTrailerIndex] = useState(0);
+  const [heroActionIndex, setHeroActionIndex] = useState(0);
   const [heroPanT, setHeroPanT] = useState(0);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
@@ -263,12 +268,14 @@ export function GridHome() {
     setHeroSplashInlineOpen(true);
     setHeroInlineSubFocus("content");
     setHeroTrailerIndex(0);
+    setHeroActionIndex(0);
   }, []);
 
   const closeHeroSplashInline = useCallback(() => {
     setHeroSplashInlineOpen(false);
     setHeroInlineSubFocus("content");
     setHeroTrailerIndex(0);
+    setHeroActionIndex(0);
   }, []);
 
   const selectedApp =
@@ -284,7 +291,10 @@ export function GridHome() {
   const heroTrailerCount = useMemo(() => {
     if (!heroSplashInlineActive) return 0;
     if (fetchState.status !== "ok" || !fetchState.data?.trailers) return 0;
-    return fetchState.data.trailers.length;
+    return Math.min(
+      HERO_TRAILER_GRID_MAX_CARDS,
+      fetchState.data.trailers.length,
+    );
   }, [heroSplashInlineActive, fetchState]);
 
   const onHeroTrailerActivate = useCallback(() => {
@@ -293,17 +303,40 @@ export function GridHome() {
     if (t) openSwitchWebApplet(richTrailerWatchUrl(t));
   }, [fetchState, heroTrailerIndex]);
 
+  const onHeroPlayGame = useCallback(() => {
+    const app = selectedApp;
+    if (!app) return;
+    registerAppLaunch(app);
+    app.launch();
+  }, [selectedApp]);
+
+  const onHeroEditInfo = useCallback(() => {
+    const picked = selectedApp;
+    if (!picked) return;
+    closeHeroSplashInline();
+    setEditRichDetailsApp(picked);
+  }, [selectedApp, closeHeroSplashInline]);
+
+  const onHeroActionActivate = useCallback(
+    (index: number) => {
+      if (index === 0) onHeroPlayGame();
+      else onHeroEditInfo();
+    },
+    [onHeroPlayGame, onHeroEditInfo],
+  );
+
   useEffect(() => {
     if (!heroSplashInlineOpen) return;
     setHeroInlineSubFocus("content");
     setHeroTrailerIndex(0);
+    setHeroActionIndex(0);
   }, [selectedApp?.id, heroSplashInlineOpen]);
 
   useEffect(() => {
     if (!heroSplashInlineActive) return;
     if (heroInlineSubFocus !== "trailers") return;
     if (heroTrailerCount === 0) {
-      setHeroInlineSubFocus("content");
+      setHeroInlineSubFocus("actions");
     }
   }, [heroSplashInlineActive, heroInlineSubFocus, heroTrailerCount]);
 
@@ -398,7 +431,12 @@ export function GridHome() {
     setFocusArea,
     navButtonIndex: selectedNavButton,
     setNavButtonIndex: setSelectedNavButton,
-    isActive: !showSettings && !showCustomSort && !detailsApp && !showAlbum,
+    isActive:
+      !showSettings &&
+      !showCustomSort &&
+      !detailsApp &&
+      !showAlbum &&
+      !editRichDetailsApp,
     onOpenSettings: () => setShowSettings(true),
     onSearchSubmit,
     onSearchCancel,
@@ -419,8 +457,13 @@ export function GridHome() {
     heroInlineSubFocus,
     setHeroInlineSubFocus,
     heroTrailerCount,
+    heroTrailerIndex,
     setHeroTrailerIndex,
     onHeroTrailerActivate,
+    heroActionIndex,
+    setHeroActionIndex,
+    heroActionCount: 2,
+    onHeroActionActivate,
   });
 
   const handleAppSelect = (index: number) => {
@@ -475,6 +518,16 @@ export function GridHome() {
           setShowCustomSort(false);
         }}
         onCancel={() => setShowCustomSort(false)}
+      />
+    );
+  }
+
+  if (editRichDetailsApp) {
+    return (
+      <EditApp
+        app={editRichDetailsApp}
+        installedAppsForPersistence={rawApps}
+        onClose={() => setEditRichDetailsApp(null)}
       />
     );
   }
@@ -538,6 +591,9 @@ export function GridHome() {
           fetchState={fetchState}
           heroInlineSubFocus={heroInlineSubFocus}
           heroTrailerIndex={heroTrailerIndex}
+          heroActionIndex={heroActionIndex}
+          onPlayGame={onHeroPlayGame}
+          onEditInfo={onHeroEditInfo}
         />
       )}
 
@@ -677,7 +733,9 @@ export function GridHome() {
         const appIconSelected =
           focusArea === "apps" &&
           i === selectedIndex &&
-          (!heroSplashInlineOpen || heroInlineSubFocus !== "trailers");
+          (!heroSplashInlineOpen ||
+            (heroInlineSubFocus !== "trailers" &&
+              heroInlineSubFocus !== "actions"));
         const focusScaleSlopX =
           (iconW * (APP_ICON_SELECTED_FOCUS_SCALE - 1)) / 2;
         const cullSlopX = appIconSelected ? focusScaleSlopX : 0;
