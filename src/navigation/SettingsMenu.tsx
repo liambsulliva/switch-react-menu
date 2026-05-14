@@ -63,23 +63,24 @@ type SettingRowConfig = {
 
 const SETTING_ROWS: SettingRowConfig[] = [
   {
+    id: "disableRichDetails",
+    key: "disableRichDetails",
+    label: "Disable Rich Details",
+    variant: "knob",
+  },
+  {
     id: "showAppTitles",
     key: "showAppTitles",
     label: "Show App Titles",
     variant: "knob",
-  },
-  {
-    id: "enableHaptics",
-    key: "enableHaptics",
-    label: "Enable Haptics",
-    isDisabled: () => true,
-    variant: "knob",
+    isDisabled: (s) => !s.disableRichDetails,
   },
   {
     id: "showPageNumbers",
     key: "showPageNumbers",
     label: "Show Page Numbers",
     variant: "knob",
+    isDisabled: (s) => !s.disableRichDetails,
   },
   {
     id: "alphabeticalSort",
@@ -92,19 +93,12 @@ const SETTING_ROWS: SettingRowConfig[] = [
     key: "compactView",
     label: "Compact View",
     variant: "knob",
+    isDisabled: (s) => !s.disableRichDetails,
   },
   {
     id: "showLastPlayed",
     key: "showLastPlayed",
     label: "Show Last Played",
-    variant: "knob",
-    isDisabled: (currentSettings) => !currentSettings.showAppTitles,
-  },
-  {
-    id: "enableSounds",
-    key: "enableSounds",
-    label: "Enable Sounds",
-    isDisabled: () => true,
     variant: "knob",
   },
   {
@@ -125,13 +119,8 @@ const SETTING_ROWS: SettingRowConfig[] = [
     id: "refreshRichCatalog",
     label: "Rebuild local game database",
     variant: "action",
+    isDisabled: (s) => s.disableRichDetails,
     onSelect: ({ onRefreshRichCatalog }) => onRefreshRichCatalog?.(),
-  },
-  {
-    id: "heroSplashInlineGrid",
-    key: "heroSplashInlineGrid",
-    label: "HeroSplash on home (grid)",
-    variant: "knob",
   },
 ];
 

@@ -105,6 +105,10 @@ export function GridHome() {
 
   const appCount = apps.length;
 
+  const richDetailsExperienceEnabled = !settings.disableRichDetails;
+  const heroSplashOnGridEnabled =
+    richDetailsExperienceEnabled && settings.heroSplashInlineGrid;
+
   const gridViewportWidth = screen.width - GRID_SIDE_MARGIN * 2;
   const gridViewportX = GRID_SIDE_MARGIN;
   const gridViewportRight = gridViewportX + gridViewportWidth;
@@ -185,16 +189,22 @@ export function GridHome() {
   }, [appCount, selectedIndex]);
 
   useEffect(() => {
-    if (!settings.heroSplashInlineGrid) {
-      setHeroSplashInlineOpen(false);
+    if (!settings.disableRichDetails) {
+      setDetailsApp(null);
     }
-  }, [settings.heroSplashInlineGrid]);
+  }, [settings.disableRichDetails]);
 
   useEffect(() => {
-    if (settings.heroSplashInlineGrid && focusArea === "navigation") {
+    if (!heroSplashOnGridEnabled) {
+      setHeroSplashInlineOpen(false);
+    }
+  }, [heroSplashOnGridEnabled]);
+
+  useEffect(() => {
+    if (heroSplashOnGridEnabled && focusArea === "navigation") {
       setFocusArea("apps");
     }
-  }, [settings.heroSplashInlineGrid, focusArea]);
+  }, [heroSplashOnGridEnabled, focusArea]);
 
   const onStepPrev = useCallback(() => {
     setSelectedIndex((i) => Math.max(0, i - 1));
@@ -209,7 +219,7 @@ export function GridHome() {
 
   const selectedApp = appCount > 0 ? (apps[selectedIndex] ?? null) : null;
   const heroSplashInlineActive =
-    settings.heroSplashInlineGrid && heroSplashInlineOpen && selectedApp !== null;
+    heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
 
   const { fetchState, backgroundImageUrl, fallbackImageUrl } =
     useHeroSplashInlineExperience(selectedApp, heroSplashInlineActive);
@@ -247,11 +257,13 @@ export function GridHome() {
     onOpenSettings: () => setShowSettings(true),
     onOpenAlbum: () => setShowAlbum(true),
     onOpenWebBrowser: () => openSwitchWebApplet(),
-    onMinus: () => {
-      const app = apps[selectedIndex];
-      if (app) setDetailsApp(app);
-    },
-    replaceBottomNavWithHeroSplash: settings.heroSplashInlineGrid,
+    onMinus: settings.disableRichDetails
+      ? () => {
+          const app = apps[selectedIndex];
+          if (app) setDetailsApp(app);
+        }
+      : undefined,
+    replaceBottomNavWithHeroSplash: heroSplashOnGridEnabled,
     inlineDetailsOpen: heroSplashInlineOpen,
     onOpenInlineDetails: openHeroSplashInline,
     onCloseInlineDetails: closeHeroSplashInline,
@@ -463,7 +475,7 @@ export function GridHome() {
         );
       })}
 
-      {!settings.heroSplashInlineGrid && (
+      {!heroSplashOnGridEnabled && (
         <Navigation
           currentPage={selectedIndex}
           totalPages={appCount}
@@ -476,7 +488,7 @@ export function GridHome() {
         />
       )}
 
-      {detailsApp && (
+      {detailsApp && settings.disableRichDetails && (
         <Modal
           visible
           title="Application details"

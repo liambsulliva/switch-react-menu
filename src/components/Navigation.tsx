@@ -103,21 +103,8 @@ export function Navigation({
         onTouchStart={onNextPage}
       />
 
-      {centerLabel !== undefined && centerLabel !== "" ? (
-        <Text
-          x={screen.width / 2}
-          y={screen.height - 50}
-          fill={COLORS.gray[0]}
-          fontSize={24}
-          fontFamily="SourceSansPro-Regular"
-          textAlign="center"
-          textBaseline="middle"
-        >
-          {centerLabel}
-        </Text>
-      ) : (
-        totalPages > 0 &&
-        (showPageNumbers ? (
+      {showPageNumbers ? (
+        centerLabel !== undefined && centerLabel !== "" ? (
           <Text
             x={screen.width / 2}
             y={screen.height - 50}
@@ -127,25 +114,40 @@ export function Navigation({
             textAlign="center"
             textBaseline="middle"
           >
-            {`${currentPage + 1} of ${totalPages}`}
+            {centerLabel}
           </Text>
         ) : (
-          Array.from({ length: totalPages }, (_, i) => {
-            const dotRadius = 5;
-            const dotSpacing = 18;
-            const totalWidth = (totalPages - 1) * dotSpacing;
-            const startX = screen.width / 2 - totalWidth / 2;
-            return (
-              <Circle
-                key={i}
-                x={startX + i * dotSpacing}
-                y={screen.height - 50}
-                radius={dotRadius}
-                fill={i === currentPage ? COLORS.gray[0] : COLORS.gray[400]}
-              />
-            );
-          })
-        ))
+          totalPages > 0 && (
+            <Text
+              x={screen.width / 2}
+              y={screen.height - 50}
+              fill={COLORS.gray[0]}
+              fontSize={24}
+              fontFamily="SourceSansPro-Regular"
+              textAlign="center"
+              textBaseline="middle"
+            >
+              {`${currentPage + 1} of ${totalPages}`}
+            </Text>
+          )
+        )
+      ) : (
+        totalPages > 0 &&
+        Array.from({ length: totalPages }, (_, i) => {
+          const dotRadius = 5;
+          const dotSpacing = 18;
+          const totalWidth = (totalPages - 1) * dotSpacing;
+          const startX = screen.width / 2 - totalWidth / 2;
+          return (
+            <Circle
+              key={i}
+              x={startX + i * dotSpacing}
+              y={screen.height - 50}
+              radius={dotRadius}
+              fill={i === currentPage ? COLORS.gray[0] : COLORS.gray[400]}
+            />
+          );
+        })
       )}
     </>
   );

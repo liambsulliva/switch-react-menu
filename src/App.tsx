@@ -17,12 +17,14 @@ import { useRichDetailsHardReloadNonce } from "./lib/richDetailsHardReloadStore"
 import { loadRichPersistentPayload } from "./lib/richDetailsPersistentCache";
 import { CompactHome } from "./navigation/CompactHome";
 import { GridHome } from "./navigation/GridHome";
-import { useSettings } from "./settings/settingsStore";
+import { getSettings, useSettings } from "./settings/settingsStore";
 
 export function App() {
   const settings = useSettings();
   const hardReloadNonce = useRichDetailsHardReloadNonce();
-  const [richCatalogReady, setRichCatalogReady] = useState(false);
+  const [richCatalogReady, setRichCatalogReady] = useState(
+    () => getSettings().disableRichDetails,
+  );
   const [richCatalogLoadProgress, setRichCatalogLoadProgress] = useState(0);
   const pendingProgressRef = useRef(0);
   const progressRafRef = useRef(0);
@@ -44,7 +46,18 @@ export function App() {
   );
 
   useLayoutEffect(() => {
+    if (settings.disableRichDetails) {
+      setRichCatalogReady(true);
+      setRichCatalogLoadProgress(1);
+    } else {
+      setRichCatalogReady(false);
+      setRichCatalogLoadProgress(0);
+    }
+  }, [settings.disableRichDetails]);
+
+  useLayoutEffect(() => {
     if (
+      !settings.disableRichDetails &&
       prevHardReloadNonce.current !== null &&
       hardReloadNonce > prevHardReloadNonce.current
     ) {
@@ -52,9 +65,15 @@ export function App() {
       setRichCatalogLoadProgress(0);
     }
     prevHardReloadNonce.current = hardReloadNonce;
-  }, [hardReloadNonce]);
+  }, [hardReloadNonce, settings.disableRichDetails]);
 
   useEffect(() => {
+    if (settings.disableRichDetails) {
+      setRichCatalogReady(true);
+      setRichCatalogLoadProgress(1);
+      return;
+    }
+
     const gen = ++bootstrapGen.current;
     let alive = true;
     const installedApps = Array.from(Switch.Application).filter(
@@ -109,7 +128,7 @@ export function App() {
         progressRafRef.current = 0;
       }
     };
-  }, [hardReloadNonce, scheduleProgress]);
+  }, [settings.disableRichDetails, hardReloadNonce, scheduleProgress]);
 
   if (!richCatalogReady) {
     return <RichCatalogLoadingOverlay progress={richCatalogLoadProgress} />;

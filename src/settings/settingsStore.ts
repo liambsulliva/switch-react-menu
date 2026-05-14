@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 const STORAGE_KEY = "switch-react-menu-settings";
 
 export type AppSettings = {
+  disableRichDetails: boolean;
   showAppTitles: boolean;
   enableHaptics: boolean;
   showPageNumbers: boolean;
@@ -16,6 +17,7 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  disableRichDetails: false,
   showAppTitles: true,
   enableHaptics: true,
   showPageNumbers: true,

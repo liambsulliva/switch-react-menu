@@ -107,6 +107,12 @@ export function CompactHome() {
   }, []);
 
   useEffect(() => {
+    if (!settings.disableRichDetails) {
+      setDetailsApp(null);
+    }
+  }, [settings.disableRichDetails]);
+
+  useEffect(() => {
     if (!settings.alphabeticalSort) return;
     const alphabeticalOrder = [...apps]
       .sort((a, b) =>
@@ -337,7 +343,7 @@ export function CompactHome() {
 
       if (isMinus && !buttonState.minusPressed) {
         setButtonState((prev) => ({ ...prev, minusPressed: true }));
-        if (focusArea === "apps") {
+        if (focusArea === "apps" && settings.disableRichDetails) {
           const app = visibleSortedApps[selectedIndex];
           if (app) setDetailsApp(app);
         }
@@ -358,6 +364,7 @@ export function CompactHome() {
     appCount,
     showSettings,
     showCustomSort,
+    settings.disableRichDetails,
   ]);
 
   useEffect(() => {
@@ -400,7 +407,11 @@ export function CompactHome() {
       rightActionLabel="Settings"
       rightActionActive={focusArea === "settings"}
       onRightActionTouchStart={() => setShowSettings(true)}
-      footerHint="A  Launch      −  Details"
+      footerHint={
+        settings.disableRichDetails
+          ? "A  Launch      −  Details"
+          : "A  Launch"
+      }
     >
       <List
         x={HEADER_LAYOUT.paddingX}
@@ -440,7 +451,7 @@ export function CompactHome() {
         </Text>
       )}
 
-      {detailsApp && (
+      {detailsApp && settings.disableRichDetails && (
         <Modal
           visible
           title="Application details"
