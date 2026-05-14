@@ -88,8 +88,18 @@ function recomputeAxes(): void {
 
 const heldKeys: Record<string, boolean> = {};
 
+function eventTargetIsTextField(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as { nodeName?: string; isContentEditable?: boolean };
+  const name = el.nodeName;
+  if (name === "INPUT" || name === "TEXTAREA" || name === "SELECT")
+    return true;
+  return el.isContentEditable === true;
+}
+
 export function installKeyboardGamepadPolyfill(): void {
   const onKeyDown = (e: KeyboardEvent) => {
+    if (eventTargetIsTextField(e.target)) return;
     const binding = KEY_MAP[e.code];
     if (!binding) return;
     e.preventDefault();
@@ -100,6 +110,7 @@ export function installKeyboardGamepadPolyfill(): void {
   };
 
   const onKeyUp = (e: KeyboardEvent) => {
+    if (eventTargetIsTextField(e.target)) return;
     const binding = KEY_MAP[e.code];
     if (!binding) return;
     e.preventDefault();

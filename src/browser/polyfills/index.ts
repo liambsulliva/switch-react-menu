@@ -2,6 +2,7 @@ import type { BrowserCanvas } from "../dom";
 import { installScreenPolyfill } from "./screen";
 import { installFontsPolyfill } from "./fonts";
 import { installSwitchPolyfill } from "./switch";
+import { installBrowserVirtualKeyboardStub } from "./virtual-keyboard";
 import { installKeyboardGamepadPolyfill } from "./keyboard-gamepad";
 import { installMouseToTouchPolyfill } from "./mouse-touch";
 
@@ -14,6 +15,7 @@ export async function installNxJsPolyfills(
   installScreenPolyfill(canvas);
   installFontsPolyfill();
   await installSwitchPolyfill();
+  installBrowserVirtualKeyboardStub();
   installKeyboardGamepadPolyfill();
   installMouseToTouchPolyfill(canvas);
 }

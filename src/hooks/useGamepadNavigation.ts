@@ -7,7 +7,9 @@ export type GridHomeFocusArea =
   | "navigation"
   | "settings"
   | "album"
-  | "globe";
+  | "globe"
+  | "search"
+  | "searchInput";
 
 export type HeroSplashInlineSubFocus = "content" | "trailers";
 
@@ -24,8 +26,16 @@ interface GamepadNavigationProps {
   setNavButtonIndex: (cb: (prev: number) => number) => void;
   isActive?: boolean;
   onOpenSettings?: () => void;
+  /** Plus while search field is focused: confirm search (do not open settings). */
+  onSearchSubmit?: () => void;
+  /** Minus while search icon or field is focused: cancel search and clear query. */
+  onSearchCancel?: () => void;
   onOpenAlbum?: () => void;
   onOpenWebBrowser?: () => void;
+  /** A on the search icon: move focus into the search field / keyboard. */
+  onActivateSearch?: () => void;
+  /** Rising edge of B (e.g. clear search text). */
+  onButtonBPress?: () => void;
   onMinus?: () => void;
   replaceBottomNavWithHeroSplash?: boolean;
   inlineDetailsOpen?: boolean;
@@ -52,6 +62,7 @@ interface GamepadState {
   plusPressed: boolean;
   minusPressed: boolean;
   aPressed: boolean;
+  bPressed: boolean;
 }
 
 interface HoldRepeatState {
@@ -75,8 +86,12 @@ export function useGamepadNavigation({
   setNavButtonIndex,
   isActive = true,
   onOpenSettings,
+  onSearchSubmit,
+  onSearchCancel,
   onOpenAlbum,
   onOpenWebBrowser,
+  onActivateSearch,
+  onButtonBPress,
   onMinus,
   replaceBottomNavWithHeroSplash = false,
   inlineDetailsOpen = false,
@@ -94,6 +109,7 @@ export function useGamepadNavigation({
     plusPressed: false,
     minusPressed: false,
     aPressed: false,
+    bPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ left: null, right: null });
 
@@ -114,6 +130,7 @@ export function useGamepadNavigation({
     const appCount = apps.length;
 
     const handleLeftPress = () => {
+      if (focusArea === "searchInput") return;
       if (
         replaceBottomNavWithHeroSplash &&
         inlineDetailsOpen &&
@@ -128,6 +145,8 @@ export function useGamepadNavigation({
         setFocusArea(() => "album");
       } else if (focusArea === "album") {
         setFocusArea(() => "globe");
+      } else if (focusArea === "globe") {
+        setFocusArea(() => "search");
       } else if (focusArea === "apps") {
         onStepPrev();
       } else if (focusArea === "navigation") {
@@ -136,6 +155,7 @@ export function useGamepadNavigation({
     };
 
     const handleRightPress = () => {
+      if (focusArea === "searchInput") return;
       if (
         replaceBottomNavWithHeroSplash &&
         inlineDetailsOpen &&
@@ -152,6 +172,8 @@ export function useGamepadNavigation({
         setFocusArea(() => "settings");
       } else if (focusArea === "globe") {
         setFocusArea(() => "album");
+      } else if (focusArea === "search") {
+        setFocusArea(() => "globe");
       } else if (focusArea === "apps") {
         onStepNext();
       } else if (focusArea === "navigation") {
@@ -171,13 +193,17 @@ export function useGamepadNavigation({
         return;
       }
 
-      // Plus button opens settings
+      // Plus: settings, except search field submits instead (default “exit” overridden).
       if (
         gamepad.buttons[Button.Plus].pressed &&
         !gamepadState.plusPressed
       ) {
         setGamepadState((prev) => ({ ...prev, plusPressed: true }));
-        onOpenSettings?.();
+        if (focusArea === "searchInput") {
+          onSearchSubmit?.();
+        } else {
+          onOpenSettings?.();
+        }
       } else if (
         !gamepad.buttons[Button.Plus].pressed &&
         gamepadState.plusPressed
@@ -190,7 +216,9 @@ export function useGamepadNavigation({
         !gamepadState.minusPressed
       ) {
         setGamepadState((prev) => ({ ...prev, minusPressed: true }));
-        if (focusArea === "apps") {
+        if (focusArea === "searchInput" || focusArea === "search") {
+          onSearchCancel?.();
+        } else if (focusArea === "apps") {
           onMinus?.();
         }
       } else if (
@@ -339,6 +367,7 @@ export function useGamepadNavigation({
           setFocusArea((prev) => {
             if (prev === "navigation") return "apps";
             if (prev === "apps") return "album";
+            if (prev === "searchInput") return "search";
             return prev;
           });
         }
@@ -371,7 +400,13 @@ export function useGamepadNavigation({
           }
         } else {
           setFocusArea((prev) => {
-            if (prev === "settings" || prev === "album" || prev === "globe")
+            if (
+              prev === "settings" ||
+              prev === "album" ||
+              prev === "globe" ||
+              prev === "search" ||
+              prev === "searchInput"
+            )
               return "apps";
             if (prev === "apps") return "navigation";
             return prev;
@@ -414,9 +449,18 @@ export function useGamepadNavigation({
           onOpenAlbum?.();
         } else if (focusArea === "globe") {
           onOpenWebBrowser?.();
+        } else if (focusArea === "search") {
+          onActivateSearch?.();
         }
       } else if (!gamepad.buttons[Button.A].pressed && gamepadState.aPressed) {
         setGamepadState((prev) => ({ ...prev, aPressed: false }));
+      }
+
+      if (gamepad.buttons[Button.B].pressed && !gamepadState.bPressed) {
+        setGamepadState((prev) => ({ ...prev, bPressed: true }));
+        onButtonBPress?.();
+      } else if (!gamepad.buttons[Button.B].pressed && gamepadState.bPressed) {
+        setGamepadState((prev) => ({ ...prev, bPressed: false }));
       }
 
       animationFrameId = requestAnimationFrame(handleGamepadInput);
@@ -441,8 +485,12 @@ export function useGamepadNavigation({
     setNavButtonIndex,
     isActive,
     onOpenSettings,
+    onSearchSubmit,
+    onSearchCancel,
     onOpenAlbum,
     onOpenWebBrowser,
+    onActivateSearch,
+    onButtonBPress,
     onMinus,
     replaceBottomNavWithHeroSplash,
     inlineDetailsOpen,

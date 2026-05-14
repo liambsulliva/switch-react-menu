@@ -11,6 +11,7 @@ import { AppIcon } from "../components/AppIcon";
 import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
 import { Modal } from "../components/Modal";
 import { Navigation } from "../components/Navigation";
+import { SearchBar } from "../components/SearchBar";
 import { AlbumPage } from "./AlbumPage";
 import { CustomSortMode } from "./CustomSortMode";
 import { SettingsMenu } from "./SettingsMenu";
@@ -18,6 +19,7 @@ import {
   getAlbumIconPng,
   getCornerIconPng,
   getGlobeIconPng,
+  getSearchIconPng,
   getSettingsCogPng,
 } from "../lib/iconPng";
 import {
@@ -46,14 +48,17 @@ import {
 } from "../components/Clock";
 import { HeroSplash } from "../components/HeroSplash";
 import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
+import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
 import { easeOutDetailEntrance } from "../lib/easing";
 import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
 import { openSwitchWebApplet } from "../lib/switchWebApplet";
 import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
+import { filterAppsBySearchQuery } from "../lib/filterAppsBySearchQuery";
 
 const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
 const GRID_SIDE_MARGIN = 24;
+const SEARCH_BAR_SIDE_PADDING = 15;
 
 export function GridHome() {
   const settings = useSettings();
@@ -98,6 +103,12 @@ export function GridHome() {
   const [globeIconFocusedSrc, setGlobeIconFocusedSrc] = useState<string | null>(
     null,
   );
+  const [searchIconDefaultSrc, setSearchIconDefaultSrc] = useState<string | null>(
+    null,
+  );
+  const [searchIconFocusedSrc, setSearchIconFocusedSrc] = useState<string | null>(
+    null,
+  );
 
   const sortedApps = useMemo(
     () => sortApplicationsForMode(rawApps, settings.sortingMode, customOrder),
@@ -115,7 +126,23 @@ export function GridHome() {
     [sortedApps, hiddenGameIds],
   );
 
-  const appCount = apps.length;
+  const { text: searchQuery, clear: clearSearchKeyboard } =
+    useSwitchVirtualKeyboard(focusArea === "searchInput");
+
+  const searchBarVisible = useMemo(
+    () =>
+      focusArea === "search" ||
+      focusArea === "searchInput" ||
+      searchQuery.trim().length > 0,
+    [focusArea, searchQuery],
+  );
+
+  const appsForGrid = useMemo(
+    () => filterAppsBySearchQuery(apps, searchQuery),
+    [apps, searchQuery, installedTitlesRevision],
+  );
+
+  const appCount = appsForGrid.length;
 
   const richDetailsExperienceEnabled = !settings.disableRichDetails;
   const heroSplashOnGridEnabled =
@@ -150,6 +177,8 @@ export function GridHome() {
       getAlbumIconPng(COLORS.gray[0]),
       getGlobeIconPng(COLORS.gray[400]),
       getGlobeIconPng(COLORS.gray[0]),
+      getSearchIconPng(COLORS.gray[400]),
+      getSearchIconPng(COLORS.gray[0]),
       getSettingsCogPng(COLORS.gray[400]),
       getSettingsCogPng(COLORS.gray[0]),
     ]).then(
@@ -159,6 +188,8 @@ export function GridHome() {
         albumFocused,
         globeDefault,
         globeFocused,
+        searchDefault,
+        searchFocused,
         settingsDefault,
         settingsFocused,
       ]) => {
@@ -168,6 +199,8 @@ export function GridHome() {
         setAlbumIconFocusedSrc(albumFocused);
         setGlobeIconDefaultSrc(globeDefault);
         setGlobeIconFocusedSrc(globeFocused);
+        setSearchIconDefaultSrc(searchDefault);
+        setSearchIconFocusedSrc(searchFocused);
         setSettingsCogDefaultSrc(settingsDefault);
         setSettingsCogFocusedSrc(settingsFocused);
       },
@@ -238,7 +271,7 @@ export function GridHome() {
     setHeroTrailerIndex(0);
   }, []);
 
-  const selectedApp = appCount > 0 ? (apps[selectedIndex] ?? null) : null;
+  const selectedApp = appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
   const heroSplashInlineActive =
     heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
 
@@ -296,8 +329,63 @@ export function GridHome() {
     return () => cancelAnimationFrame(raf);
   }, [heroSplashInlineActive]);
 
+  useEffect(() => {
+    if (!heroSplashInlineActive) return;
+    if (focusArea === "search" || focusArea === "searchInput") {
+      setFocusArea("apps");
+    }
+  }, [heroSplashInlineActive, focusArea]);
+
+  const onActivateSearch = useCallback(() => {
+    setFocusArea("searchInput");
+  }, []);
+
+  const onSearchSubmit = useCallback(() => {
+    const vk = (
+      navigator as Navigator & {
+        virtualKeyboard?: EventTarget & { dispatchEvent?: (e: Event) => boolean };
+      }
+    ).virtualKeyboard;
+    if (vk && typeof vk.dispatchEvent === "function") {
+      vk.dispatchEvent(new Event("submit"));
+    }
+    setFocusArea("apps");
+  }, []);
+
+  const onSearchCancel = useCallback(() => {
+    clearSearchKeyboard();
+    setFocusArea("apps");
+  }, [clearSearchKeyboard]);
+
+  const onSearchBarPress = useCallback(() => {
+    setFocusArea("searchInput");
+    const vk = (
+      navigator as Navigator & {
+        virtualKeyboard?: { show?: () => void };
+      }
+    ).virtualKeyboard;
+    vk?.show?.();
+  }, []);
+
+  const onSearchIconTouch = useCallback(() => {
+    if (focusArea === "searchInput" || focusArea === "search") {
+      onSearchCancel();
+      return;
+    }
+    setFocusArea("searchInput");
+  }, [focusArea, onSearchCancel]);
+
+  const onButtonBPress = useCallback(() => {
+    if (focusArea === "searchInput") {
+      if (searchQuery.trim()) clearSearchKeyboard();
+      else setFocusArea("search");
+      return;
+    }
+    if (searchQuery.trim()) clearSearchKeyboard();
+  }, [focusArea, searchQuery, clearSearchKeyboard]);
+
   useGamepadNavigation({
-    apps,
+    apps: appsForGrid,
     jumpStep,
     onStepPrev,
     onStepNext,
@@ -309,14 +397,18 @@ export function GridHome() {
     setNavButtonIndex: setSelectedNavButton,
     isActive: !showSettings && !showCustomSort && !detailsApp && !showAlbum,
     onOpenSettings: () => setShowSettings(true),
+    onSearchSubmit,
+    onSearchCancel,
     onOpenAlbum: () => setShowAlbum(true),
     onOpenWebBrowser: () => openSwitchWebApplet(),
+    onActivateSearch,
     onMinus: settings.disableRichDetails
       ? () => {
-          const app = apps[selectedIndex];
+          const app = appsForGrid[selectedIndex];
           if (app) setDetailsApp(app);
         }
       : undefined,
+    onButtonBPress,
     replaceBottomNavWithHeroSplash: heroSplashOnGridEnabled,
     inlineDetailsOpen: heroSplashInlineOpen,
     onOpenInlineDetails: openHeroSplashInline,
@@ -329,7 +421,8 @@ export function GridHome() {
   });
 
   const handleAppSelect = (index: number) => {
-    const picked = apps[index];
+    setFocusArea("apps");
+    const picked = appsForGrid[index];
     if (!picked) return;
     if (index === selectedIndex) {
       registerAppLaunch(picked);
@@ -403,6 +496,15 @@ export function GridHome() {
   const cornerIconSize = 48;
   const cornerIconX = 32;
   const cornerIconY = settingsBtnCenterY - cornerIconSize / 2;
+  const searchIconSize = 44;
+  const searchIconX = globeIconX - topBarIconGap - searchIconSize;
+  const searchIconY = settingsBtnCenterY - searchIconSize / 2;
+  const searchBarLeft =
+    cornerIconX + cornerIconSize + topBarIconGap + SEARCH_BAR_SIDE_PADDING;
+  const searchBarRight = searchIconX - 8 - SEARCH_BAR_SIDE_PADDING;
+  const searchBarWidth = Math.max(0, searchBarRight - searchBarLeft);
+  const searchBarHeight = 36;
+  const searchBarY = settingsBtnCenterY - searchBarHeight / 2;
 
   const navCenterLabel =
     appCount > 0 ? `${selectedIndex + 1} / ${appCount}` : undefined;
@@ -442,6 +544,45 @@ export function GridHome() {
           y={cornerIconY}
           width={cornerIconSize}
           height={cornerIconSize}
+        />
+      )}
+
+      {!heroSplashInlineActive && searchBarVisible && (
+        <SearchBar
+          x={searchBarLeft}
+          y={searchBarY}
+          width={searchBarWidth}
+          height={searchBarHeight}
+          query={searchQuery}
+          visible
+          inputFocused={focusArea === "searchInput"}
+          onBarPress={onSearchBarPress}
+        />
+      )}
+
+      {!heroSplashInlineActive &&
+        searchIconDefaultSrc &&
+        searchIconFocusedSrc && (
+          <Image
+            src={
+              focusArea === "search" || focusArea === "searchInput"
+                ? searchIconFocusedSrc
+                : searchIconDefaultSrc
+            }
+            x={searchIconX}
+            y={searchIconY}
+            width={searchIconSize}
+            height={searchIconSize}
+          />
+        )}
+      {!heroSplashInlineActive && searchIconDefaultSrc && (
+        <Rect
+          x={searchIconX + searchIconSize / 2 - 28}
+          y={searchIconY + searchIconSize / 2 - 28}
+          width={56}
+          height={56}
+          fill="transparent"
+          onTouchStart={onSearchIconTouch}
         />
       )}
 
@@ -519,7 +660,7 @@ export function GridHome() {
         />
       )}
 
-      {apps.map((app, i) => {
+      {appsForGrid.map((app, i) => {
         const baseX = i * (iconW + GRID_GAP);
         const renderX = gridViewportX + baseX - scrollX;
 
