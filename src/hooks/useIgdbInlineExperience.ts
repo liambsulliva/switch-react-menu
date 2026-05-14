@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
+import type { IgdbGameDetails } from "../lib/igdb";
 import {
-  fetchIgdbGameByName,
-  hasIgdbClientConfig,
-  type IgdbGameDetails,
-} from "../lib/igdb";
+  findBundledIgdbMatch,
+  getBundledIgdbCatalog,
+} from "../lib/igdbBundledCatalog";
+import { canFetchRemoteIgdbUrls } from "../lib/remoteIgdbAssets";
 
 export type IgdbInlineFetchState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "noCred" }
   | { status: "error"; message: string }
   | { status: "ok"; data: IgdbGameDetails | null };
 
@@ -36,35 +36,29 @@ export function useIgdbInlineExperience(
       return;
     }
 
-    if (!hasIgdbClientConfig()) {
-      setFetchState({ status: "noCred" });
-      const fallback = app.icon
-        ? URL.createObjectURL(new Blob([app.icon]))
-        : null;
-      setHeroImageUrl(fallback);
-      return () => {
-        if (fallback) URL.revokeObjectURL(fallback);
-      };
-    }
-
     const ac = new AbortController();
     setFetchState({ status: "loading" });
 
     const localIconUrl = appIconObjectUrl(app);
     setHeroImageUrl(localIconUrl);
 
-    fetchIgdbGameByName(app.name, ac.signal)
-      .then((data) => {
+    void (async () => {
+      try {
+        const catalog = await getBundledIgdbCatalog();
         if (ac.signal.aborted) return;
-        setFetchState({ status: "ok", data });
-        const cover = data?.coverUrl ?? localIconUrl;
+        const bundled = findBundledIgdbMatch(catalog.games, app.name);
+        setFetchState({ status: "ok", data: bundled });
+        const cover =
+          canFetchRemoteIgdbUrls() && bundled?.coverUrl
+            ? bundled.coverUrl
+            : localIconUrl;
         setHeroImageUrl(cover);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (ac.signal.aborted) return;
         const message = err instanceof Error ? err.message : "Request failed";
         setFetchState({ status: "error", message });
-      });
+      }
+    })();
 
     return () => {
       ac.abort();

@@ -26,9 +26,7 @@ import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
-import {
-  IgdbPs5HeroBackdrop,
-} from "../components/IgdbPs5HeroBackdrop";
+import { IgdbPs5HeroBackdrop } from "../components/IgdbPs5HeroBackdrop";
 import { useIgdbInlineExperience } from "../hooks/useIgdbInlineExperience";
 import { easeOutDetailEntrance } from "../lib/easing";
 
@@ -203,7 +201,7 @@ export function GridHome() {
   const openInlineIgdb = useCallback(() => setInlineIgdbOpen(true), []);
   const closeInlineIgdb = useCallback(() => setInlineIgdbOpen(false), []);
 
-  const selectedApp = appCount > 0 ? apps[selectedIndex] ?? null : null;
+  const selectedApp = appCount > 0 ? (apps[selectedIndex] ?? null) : null;
   const igdbInlineActive =
     settings.igdbInlineGridDetails && inlineIgdbOpen && selectedApp !== null;
 
@@ -269,8 +267,7 @@ export function GridHome() {
   const iconW = GRID_ICON_SIZE;
   const iconH = GRID_ICON_SIZE;
   const quarterScreenH = Math.floor(screen.height / 4);
-  const iconLiftY =
-    igdbInlineActive ? -quarterScreenH * heroPanT : 0;
+  const iconLiftY = igdbInlineActive ? -quarterScreenH * heroPanT : 0;
   const iconBaseY = screen.height / 2 - iconH / 2 + iconLiftY;
   const totalRowWidth =
     appCount > 0 ? appCount * (iconW + GRID_GAP) - GRID_GAP : 0;

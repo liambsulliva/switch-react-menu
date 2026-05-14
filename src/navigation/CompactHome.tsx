@@ -73,9 +73,7 @@ export function CompactHome() {
   const [focusArea, setFocusArea] = useState<ListFocusArea>("apps");
   const [showSettings, setShowSettings] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
-  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(
-    null,
-  );
+  const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
 
   const [buttonState, setButtonState] = useState<ButtonState>({
     upPressed: false,
@@ -124,8 +122,7 @@ export function CompactHome() {
   }, [apps, settings.alphabeticalSort, customOrder]);
 
   const visibleSortedApps = useMemo(
-    () =>
-      sortedApps.filter((app) => !hiddenGameIds.has(app.id.toString())),
+    () => sortedApps.filter((app) => !hiddenGameIds.has(app.id.toString())),
     [sortedApps, hiddenGameIds],
   );
 

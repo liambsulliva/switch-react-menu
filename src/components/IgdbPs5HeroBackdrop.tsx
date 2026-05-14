@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Image, Rect, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
 import { formatIgdbReleaseDate } from "../lib/igdb";
+import { canFetchRemoteIgdbUrls } from "../lib/remoteIgdbAssets";
 import type { IgdbInlineFetchState } from "../hooks/useIgdbInlineExperience";
 
 const iconUrlCache = new Map<string, string>();
@@ -85,9 +86,9 @@ export function IgdbPs5HeroBackdrop({
   );
 
   const coverSrc =
-    state.status === "ok" && state.data?.coverUrl
+    state.status === "ok" && state.data?.coverUrl && canFetchRemoteIgdbUrls()
       ? state.data.coverUrl
-      : imageUrl ?? fallbackIconSrc;
+      : (imageUrl ?? fallbackIconSrc);
 
   const title =
     state.status === "ok" && state.data?.name ? state.data.name : app.name;
@@ -111,10 +112,7 @@ export function IgdbPs5HeroBackdrop({
       : yAfterTitle + 6;
   const maxSummaryLines = Math.max(
     3,
-    Math.min(
-      10,
-      Math.floor((heroTop + HERO_H - summaryStartY - 48) / 20),
-    ),
+    Math.min(10, Math.floor((heroTop + HERO_H - summaryStartY - 48) / 20)),
   );
 
   const summaryLines =
@@ -197,20 +195,6 @@ export function IgdbPs5HeroBackdrop({
       >
         {truncateEnd(title, 44)}
       </Text>
-
-      {state.status === "noCred" && (
-        <Text
-          x={textX}
-          y={yAfterTitle}
-          fill={COLORS.gray[400]}
-          fontSize={17}
-          fontFamily="SourceSansPro-Regular"
-          textAlign="left"
-          textBaseline="top"
-        >
-          Set VITE_IGDB_CLIENT_ID and VITE_IGDB_CLIENT_SECRET (Twitch app).
-        </Text>
-      )}
 
       {(state.status === "loading" || state.status === "idle") && (
         <Text
@@ -298,12 +282,7 @@ export function IgdbPs5HeroBackdrop({
             <Text
               key={`tr-${t.youtubeId}`}
               x={textX}
-              y={
-                summaryStartY +
-                summaryLines.length * 20 +
-                6 +
-                i * 20
-              }
+              y={summaryStartY + summaryLines.length * 20 + 6 + i * 20}
               fill={COLORS.gray[300]}
               fontSize={16}
               fontFamily="SourceSansPro-Regular"
