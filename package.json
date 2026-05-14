@@ -11,7 +11,7 @@
     "dev": "vite",
     "preview": "vite build && vite preview",
     "build:browser": "vite build",
-    "catalog:populate": "node scripts/fetch-igdb-popular.mjs",
+    "catalog:populate": "node scripts/fetch-igdb-games.mjs",
     "copy-assets": "mkdir -p romfs && cp -r public/* romfs/",
     "build:switch": "npm run copy-assets && esbuild --bundle --sourcemap --sources-content=false --target=es2022 --format=esm src/main.tsx --outfile=romfs/main.js",
     "build": "npm run build:switch",

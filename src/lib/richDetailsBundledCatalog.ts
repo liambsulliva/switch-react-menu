@@ -10,7 +10,7 @@ export type RichBundledCatalogFile = {
   games: RichGameDetails[];
 };
 
-const ROMFS_PATH = "romfs:/igdb-popular-games.json";
+const ROMFS_PATH = "romfs:/igdb-games-catalog.json";
 
 function romfsPathToHttpUrl(romfsPath: string): string | null {
   if (!romfsPath.startsWith("romfs:/")) return null;
@@ -151,7 +151,9 @@ export function resetRichDetailsSessionForHardReload(): void {
   installedMatchesByAppId.clear();
 }
 
-export function applyRichHydrationFromDisk(payload: RichPersistentPayload): void {
+export function applyRichHydrationFromDisk(
+  payload: RichPersistentPayload,
+): void {
   if (payload.meta.schema !== 1) return;
   installedMatchesByAppId.clear();
   for (const [id, match] of Object.entries(payload.matches)) {
