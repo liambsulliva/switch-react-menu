@@ -27,8 +27,7 @@ interface GamepadNavigationProps {
   onOpenAlbum?: () => void;
   onOpenWebBrowser?: () => void;
   onMinus?: () => void;
-  /** Grid: hide bottom nav; ↓ on apps opens inline IGDB panel instead of focusing nav. */
-  replaceBottomNavWithIgdb?: boolean;
+  replaceBottomNavWithHeroSplash?: boolean;
   inlineDetailsOpen?: boolean;
   onOpenInlineDetails?: () => void;
   onCloseInlineDetails?: () => void;
@@ -74,7 +73,7 @@ export function useGamepadNavigation({
   onOpenAlbum,
   onOpenWebBrowser,
   onMinus,
-  replaceBottomNavWithIgdb = false,
+  replaceBottomNavWithHeroSplash = false,
   inlineDetailsOpen = false,
   onOpenInlineDetails,
   onCloseInlineDetails,
@@ -279,7 +278,7 @@ export function useGamepadNavigation({
           directionalPressed: { ...prev.directionalPressed, Up: true },
         }));
         if (
-          replaceBottomNavWithIgdb &&
+          replaceBottomNavWithHeroSplash &&
           focusArea === "apps" &&
           inlineDetailsOpen
         ) {
@@ -308,7 +307,7 @@ export function useGamepadNavigation({
           ...prev,
           directionalPressed: { ...prev.directionalPressed, Down: true },
         }));
-        if (replaceBottomNavWithIgdb && focusArea === "apps") {
+        if (replaceBottomNavWithHeroSplash && focusArea === "apps") {
           onOpenInlineDetails?.();
         } else {
           setFocusArea((prev) => {
@@ -376,7 +375,7 @@ export function useGamepadNavigation({
     onOpenAlbum,
     onOpenWebBrowser,
     onMinus,
-    replaceBottomNavWithIgdb,
+    replaceBottomNavWithHeroSplash,
     inlineDetailsOpen,
     onOpenInlineDetails,
     onCloseInlineDetails,

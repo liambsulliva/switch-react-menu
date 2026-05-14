@@ -12,7 +12,7 @@ export type AppSettings = {
   enableSounds: boolean;
   screensaver: boolean;
   customSort: boolean;
-  igdbInlineGridDetails: boolean;
+  heroSplashInlineGrid: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   enableSounds: false,
   screensaver: true,
   customSort: false,
-  igdbInlineGridDetails: false,
+  heroSplashInlineGrid: false,
 };
 
 function storage(): Storage | null {
@@ -40,8 +40,17 @@ function loadSettings(): AppSettings {
   try {
     const raw = ls.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<AppSettings>;
-      return { ...DEFAULT_SETTINGS, ...parsed };
+      const parsed = JSON.parse(raw) as Partial<
+        AppSettings & { igdbInlineGridDetails?: boolean }
+      >;
+      const heroSplashInlineGrid =
+        parsed.heroSplashInlineGrid ?? parsed.igdbInlineGridDetails ?? false;
+      const { igdbInlineGridDetails: _legacy, ...rest } = parsed;
+      return {
+        ...DEFAULT_SETTINGS,
+        ...rest,
+        heroSplashInlineGrid,
+      };
     }
   } catch {
     // ignore corrupt save data

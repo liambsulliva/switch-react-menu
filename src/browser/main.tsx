@@ -17,20 +17,13 @@ async function bootstrap(): Promise<void> {
 
   // Dynamically import everything AFTER the polyfills
   // This makes react-tela comfortable with rendering to the DOM instead of the OG runtime
-  const [
-    { default: React },
-    { render },
-    { App },
-    { initializeInstalledIgdbMatches },
-  ] = await Promise.all([
+  const [{ default: React }, { render }, { App }] = await Promise.all([
     import("react"),
     import("react-tela/render"),
     import("../App"),
-    import("../lib/igdbBundledCatalog"),
   ]);
 
-  const installedApps = Array.from(Switch.Application).filter((app) => app.icon);
-  await Promise.all([loadFonts(), initializeInstalledIgdbMatches(installedApps)]);
+  await loadFonts();
 
   render(
     React.createElement(App),

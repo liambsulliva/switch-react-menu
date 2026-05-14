@@ -26,9 +26,10 @@ import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
-import { IgdbPs5HeroBackdrop } from "../components/IgdbPs5HeroBackdrop";
-import { useIgdbInlineExperience } from "../hooks/useIgdbInlineExperience";
+import { HeroSplash } from "../components/HeroSplash";
+import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
 import { easeOutDetailEntrance } from "../lib/easing";
+import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
 
 const GRID_HOME_WEB_APPLET_URL = "https://google.com";
 
@@ -56,7 +57,7 @@ export function GridHome() {
   const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
   const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
-  const [inlineIgdbOpen, setInlineIgdbOpen] = useState(false);
+  const [heroSplashInlineOpen, setHeroSplashInlineOpen] = useState(false);
   const [heroPanT, setHeroPanT] = useState(0);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
@@ -113,6 +114,11 @@ export function GridHome() {
       Math.max(1, Math.floor(gridViewportWidth / (GRID_ICON_SIZE + GRID_GAP))),
     [gridViewportWidth],
   );
+
+  const handleRefreshRichCatalog = useCallback(() => {
+    setShowSettings(false);
+    requestRichDetailsCatalogHardReload();
+  }, []);
 
   useEffect(() => {
     const loaded = Array.from(Switch.Application).filter((app) => app.icon);
@@ -179,16 +185,16 @@ export function GridHome() {
   }, [appCount, selectedIndex]);
 
   useEffect(() => {
-    if (!settings.igdbInlineGridDetails) {
-      setInlineIgdbOpen(false);
+    if (!settings.heroSplashInlineGrid) {
+      setHeroSplashInlineOpen(false);
     }
-  }, [settings.igdbInlineGridDetails]);
+  }, [settings.heroSplashInlineGrid]);
 
   useEffect(() => {
-    if (settings.igdbInlineGridDetails && focusArea === "navigation") {
+    if (settings.heroSplashInlineGrid && focusArea === "navigation") {
       setFocusArea("apps");
     }
-  }, [settings.igdbInlineGridDetails, focusArea]);
+  }, [settings.heroSplashInlineGrid, focusArea]);
 
   const onStepPrev = useCallback(() => {
     setSelectedIndex((i) => Math.max(0, i - 1));
@@ -198,18 +204,18 @@ export function GridHome() {
     setSelectedIndex((i) => Math.min(Math.max(0, appCount - 1), i + 1));
   }, [appCount]);
 
-  const openInlineIgdb = useCallback(() => setInlineIgdbOpen(true), []);
-  const closeInlineIgdb = useCallback(() => setInlineIgdbOpen(false), []);
+  const openHeroSplashInline = useCallback(() => setHeroSplashInlineOpen(true), []);
+  const closeHeroSplashInline = useCallback(() => setHeroSplashInlineOpen(false), []);
 
   const selectedApp = appCount > 0 ? (apps[selectedIndex] ?? null) : null;
-  const igdbInlineActive =
-    settings.igdbInlineGridDetails && inlineIgdbOpen && selectedApp !== null;
+  const heroSplashInlineActive =
+    settings.heroSplashInlineGrid && heroSplashInlineOpen && selectedApp !== null;
 
   const { fetchState, backgroundImageUrl, fallbackImageUrl } =
-    useIgdbInlineExperience(selectedApp, igdbInlineActive);
+    useHeroSplashInlineExperience(selectedApp, heroSplashInlineActive);
 
   useEffect(() => {
-    if (!igdbInlineActive) {
+    if (!heroSplashInlineActive) {
       setHeroPanT(0);
       return;
     }
@@ -224,7 +230,7 @@ export function GridHome() {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [igdbInlineActive]);
+  }, [heroSplashInlineActive]);
 
   useGamepadNavigation({
     apps,
@@ -245,10 +251,10 @@ export function GridHome() {
       const app = apps[selectedIndex];
       if (app) setDetailsApp(app);
     },
-    replaceBottomNavWithIgdb: settings.igdbInlineGridDetails,
-    inlineDetailsOpen: inlineIgdbOpen,
-    onOpenInlineDetails: openInlineIgdb,
-    onCloseInlineDetails: closeInlineIgdb,
+    replaceBottomNavWithHeroSplash: settings.heroSplashInlineGrid,
+    inlineDetailsOpen: heroSplashInlineOpen,
+    onOpenInlineDetails: openHeroSplashInline,
+    onCloseInlineDetails: closeHeroSplashInline,
   });
 
   const handleAppSelect = (index: number) => {
@@ -265,7 +271,7 @@ export function GridHome() {
   const iconW = GRID_ICON_SIZE;
   const iconH = GRID_ICON_SIZE;
   const quarterScreenH = Math.floor(screen.height / 4);
-  const iconLiftY = igdbInlineActive ? -quarterScreenH * heroPanT : 0;
+  const iconLiftY = heroSplashInlineActive ? -quarterScreenH * heroPanT : 0;
   const iconBaseY = screen.height / 2 - iconH / 2 + iconLiftY;
   const totalRowWidth =
     appCount > 0 ? appCount * (iconW + GRID_GAP) - GRID_GAP : 0;
@@ -287,6 +293,7 @@ export function GridHome() {
           setShowSettings(false);
           setShowCustomSort(true);
         }}
+        onRefreshRichCatalog={handleRefreshRichCatalog}
       />
     );
   }
@@ -339,8 +346,8 @@ export function GridHome() {
         fill={COLORS.background}
       />
 
-      {igdbInlineActive && selectedApp && (
-        <IgdbPs5HeroBackdrop
+      {heroSplashInlineActive && selectedApp && (
+        <HeroSplash
           panT={heroPanT}
           backgroundImageUrl={backgroundImageUrl}
           fallbackImageUrl={fallbackImageUrl}
@@ -349,7 +356,7 @@ export function GridHome() {
         />
       )}
 
-      {!igdbInlineActive && cornerIconSrc && (
+      {!heroSplashInlineActive && cornerIconSrc && (
         <Image
           src={cornerIconSrc}
           x={cornerIconX}
@@ -359,7 +366,7 @@ export function GridHome() {
         />
       )}
 
-      {!igdbInlineActive && globeIconDefaultSrc && globeIconFocusedSrc && (
+      {!heroSplashInlineActive && globeIconDefaultSrc && globeIconFocusedSrc && (
         <Image
           src={
             focusArea === "globe" ? globeIconFocusedSrc : globeIconDefaultSrc
@@ -370,7 +377,7 @@ export function GridHome() {
           height={globeIconSize}
         />
       )}
-      {!igdbInlineActive && (
+      {!heroSplashInlineActive && (
         <Rect
           x={globeIconX + globeIconSize / 2 - globeIconHitW / 2}
           y={globeIconY + globeIconSize / 2 - globeIconHitH / 2}
@@ -381,7 +388,7 @@ export function GridHome() {
         />
       )}
 
-      {!igdbInlineActive && albumIconDefaultSrc && albumIconFocusedSrc && (
+      {!heroSplashInlineActive && albumIconDefaultSrc && albumIconFocusedSrc && (
         <Image
           src={
             focusArea === "album" ? albumIconFocusedSrc : albumIconDefaultSrc
@@ -392,7 +399,7 @@ export function GridHome() {
           height={albumIconSize}
         />
       )}
-      {!igdbInlineActive && (
+      {!heroSplashInlineActive && (
         <Rect
           x={albumIconX + albumIconSize / 2 - albumIconHitW / 2}
           y={albumIconY + albumIconSize / 2 - albumIconHitH / 2}
@@ -403,7 +410,7 @@ export function GridHome() {
         />
       )}
 
-      {!igdbInlineActive && settingsCogDefaultSrc && settingsCogFocusedSrc && (
+      {!heroSplashInlineActive && settingsCogDefaultSrc && settingsCogFocusedSrc && (
         <Image
           src={
             focusArea === "settings"
@@ -416,7 +423,7 @@ export function GridHome() {
           height={settingsCogSize}
         />
       )}
-      {!igdbInlineActive && (
+      {!heroSplashInlineActive && (
         <Rect
           x={settingsBtnCenterX - settingsBtnW / 2}
           y={settingsBtnCenterY - settingsBtnH / 2}
@@ -456,7 +463,7 @@ export function GridHome() {
         );
       })}
 
-      {!settings.igdbInlineGridDetails && (
+      {!settings.heroSplashInlineGrid && (
         <Navigation
           currentPage={selectedIndex}
           totalPages={appCount}

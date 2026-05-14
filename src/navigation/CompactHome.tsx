@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Text } from "react-tela";
 import { Button } from "@nx.js/constants";
 import { truncate } from "../lib/truncate";
@@ -17,6 +23,7 @@ import {
 import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
+import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
 
 const ROW_HEIGHT = 84;
 const listHeight =
@@ -92,6 +99,11 @@ export function CompactHome() {
   useEffect(() => {
     const loaded = Array.from(Switch.Application).filter((app) => app.icon);
     setApps(loaded);
+  }, []);
+
+  const handleRefreshRichCatalog = useCallback(() => {
+    setShowSettings(false);
+    requestRichDetailsCatalogHardReload();
   }, []);
 
   useEffect(() => {
@@ -363,6 +375,7 @@ export function CompactHome() {
           setShowSettings(false);
           setShowCustomSort(true);
         }}
+        onRefreshRichCatalog={handleRefreshRichCatalog}
       />
     );
   }

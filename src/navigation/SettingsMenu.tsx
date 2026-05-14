@@ -18,6 +18,7 @@ import type { ListElementModel } from "../components/ListElement";
 interface SettingsMenuProps {
   onClose: () => void;
   onCustomSort?: () => void;
+  onRefreshRichCatalog?: () => void;
 }
 
 type SettingsFocusArea = "list" | "back";
@@ -46,13 +47,18 @@ const panelWidth = screen.width - HEADER_LAYOUT.paddingX * 2;
 const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
 
+type SettingsActionHandlers = {
+  onCustomSort?: () => void;
+  onRefreshRichCatalog?: () => void;
+};
+
 type SettingRowConfig = {
   id: string;
   label: string;
   variant: "knob" | "action";
   key?: keyof AppSettings;
   isDisabled?: (settings: AppSettings) => boolean;
-  onSelect?: (onCustomSort?: () => void) => void;
+  onSelect?: (handlers: SettingsActionHandlers) => void;
 };
 
 const SETTING_ROWS: SettingRowConfig[] = [
@@ -113,12 +119,18 @@ const SETTING_ROWS: SettingRowConfig[] = [
     label: "Custom Sort",
     variant: "action",
     isDisabled: (currentSettings) => currentSettings.alphabeticalSort,
-    onSelect: (onCustomSort) => onCustomSort?.(),
+    onSelect: ({ onCustomSort }) => onCustomSort?.(),
   },
   {
-    id: "igdbInlineGridDetails",
-    key: "igdbInlineGridDetails",
-    label: "IGDB details on home (grid)",
+    id: "refreshRichCatalog",
+    label: "Rebuild local game database",
+    variant: "action",
+    onSelect: ({ onRefreshRichCatalog }) => onRefreshRichCatalog?.(),
+  },
+  {
+    id: "heroSplashInlineGrid",
+    key: "heroSplashInlineGrid",
+    label: "HeroSplash on home (grid)",
     variant: "knob",
   },
 ];
@@ -129,7 +141,11 @@ function ensureVisible(index: number, offset: number): number {
   return offset;
 }
 
-export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
+export function SettingsMenu({
+  onClose,
+  onCustomSort,
+  onRefreshRichCatalog,
+}: SettingsMenuProps) {
   const settings = useSettings();
   const listElements = useMemo<ListElementModel[]>(
     () =>
@@ -144,10 +160,13 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
             toggleSetting(row.key);
             return;
           }
-          row.onSelect?.(onCustomSort);
+          row.onSelect?.({
+            onCustomSort,
+            onRefreshRichCatalog,
+          });
         },
       })),
-    [settings, onCustomSort],
+    [settings, onCustomSort, onRefreshRichCatalog],
   );
   const selectableIndexes = useMemo(
     () =>
