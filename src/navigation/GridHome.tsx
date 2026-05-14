@@ -61,6 +61,26 @@ const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
 const GRID_SIDE_MARGIN = 24;
 const SEARCH_BAR_SIDE_PADDING = 15;
+const HOME_TOP_BAR_ROW_CENTER_Y = 50;
+const HOME_SEARCH_BAR_HEIGHT_PX = 36;
+const SEARCH_LAYOUT_MARGIN_BAR_TO_ICON_ROW_PX = -75;
+const APP_ICON_TITLE_GAP_BELOW_DEFAULT_PX = 20;
+const APP_ICON_TITLE_GAP_BELOW_SEARCH_PX = 5;
+const APP_ICON_TITLE_FONT_DEFAULT_PX = 24;
+const APP_ICON_TITLE_FONT_SEARCH_PX = 18;
+const APP_ICON_TITLE_MAX_CHARS_DEFAULT = 17;
+const APP_ICON_TITLE_MAX_CHARS_SEARCH = 22;
+const APP_ICON_TITLE_LINE_BELOW_SLACK_DEFAULT_PX = 36;
+const APP_ICON_TITLE_LINE_BELOW_SLACK_SEARCH_PX = 28;
+const SEARCH_BAR_FONT_DEFAULT_PX = 22;
+const SEARCH_BAR_FONT_SEARCH_INPUT_PX = 18;
+const SEARCH_BAR_DISPLAY_MAX_CHARS_DEFAULT = 42;
+const SEARCH_BAR_DISPLAY_MAX_CHARS_SEARCH_INPUT = 52;
+const switchSearchKeyboardReservePx = () =>
+  Math.min(
+    Math.max(Math.floor(screen.height * 0.4), 280),
+    Math.floor(screen.height * 0.55),
+  );
 
 export function GridHome() {
   const settings = useSettings();
@@ -157,10 +177,54 @@ export function GridHome() {
   const gridViewportX = GRID_SIDE_MARGIN;
   const gridViewportRight = gridViewportX + gridViewportWidth;
 
+  const selectedApp =
+    appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
+  const heroSplashInlineActive =
+    heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
+
+  const searchLayoutActive =
+    focusArea === "searchInput" && !heroSplashInlineActive;
+  const showGridTitles = settings.showAppTitles && !heroSplashInlineActive;
+  const titleGapBelowIconPx =
+    showGridTitles && searchLayoutActive
+      ? APP_ICON_TITLE_GAP_BELOW_SEARCH_PX
+      : APP_ICON_TITLE_GAP_BELOW_DEFAULT_PX;
+  const titleFontSize =
+    showGridTitles && searchLayoutActive
+      ? APP_ICON_TITLE_FONT_SEARCH_PX
+      : APP_ICON_TITLE_FONT_DEFAULT_PX;
+  const titleMaxChars =
+    showGridTitles && searchLayoutActive
+      ? APP_ICON_TITLE_MAX_CHARS_SEARCH
+      : APP_ICON_TITLE_MAX_CHARS_DEFAULT;
+  const titleLineBelowSlackPx =
+    showGridTitles && searchLayoutActive
+      ? APP_ICON_TITLE_LINE_BELOW_SLACK_SEARCH_PX
+      : APP_ICON_TITLE_LINE_BELOW_SLACK_DEFAULT_PX;
+  const titleStackBelowIcons = showGridTitles
+    ? titleGapBelowIconPx + titleLineBelowSlackPx
+    : 12;
+  const searchGridSafeTop =
+    HOME_TOP_BAR_ROW_CENTER_Y +
+    HOME_SEARCH_BAR_HEIGHT_PX / 2 +
+    SEARCH_LAYOUT_MARGIN_BAR_TO_ICON_ROW_PX;
+  const searchGridSafeBottom = screen.height - switchSearchKeyboardReservePx();
+  const searchGridVerticalBudget = Math.max(
+    140,
+    searchGridSafeBottom - searchGridSafeTop,
+  );
+  const searchIconSlotByQuarterScreen = Math.floor(screen.height / 4);
+  const gridIconSlotSize = searchLayoutActive
+    ? Math.max(
+        128,
+        Math.min(GRID_ICON_SIZE, searchIconSlotByQuarterScreen),
+      )
+    : GRID_ICON_SIZE;
+
   const jumpStep = useMemo(
     () =>
-      Math.max(1, Math.floor(gridViewportWidth / (GRID_ICON_SIZE + GRID_GAP))),
-    [gridViewportWidth],
+      Math.max(1, Math.floor(gridViewportWidth / (gridIconSlotSize + GRID_GAP))),
+    [gridViewportWidth, gridIconSlotSize],
   );
 
   const handleRefreshRichCatalog = useCallback(() => {
@@ -277,11 +341,6 @@ export function GridHome() {
     setHeroTrailerIndex(0);
     setHeroActionIndex(0);
   }, []);
-
-  const selectedApp =
-    appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
-  const heroSplashInlineActive =
-    heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
 
   const { fetchState } = useHeroSplashInlineExperience(
     selectedApp,
@@ -478,11 +537,14 @@ export function GridHome() {
     }
   };
 
-  const iconW = GRID_ICON_SIZE;
-  const iconH = GRID_ICON_SIZE;
+  const iconW = gridIconSlotSize;
+  const iconH = gridIconSlotSize;
   const quarterScreenH = Math.floor(screen.height / 4);
   const iconLiftY = heroSplashInlineActive ? -quarterScreenH * heroPanT : 0;
-  const iconBaseY = screen.height / 2 - iconH / 2 + iconLiftY;
+  const iconBaseY = searchLayoutActive
+    ? searchGridSafeTop +
+      (searchGridVerticalBudget - (iconH + titleStackBelowIcons)) / 2
+    : screen.height / 2 - iconH / 2 + iconLiftY;
   const totalRowWidth =
     appCount > 0 ? appCount * (iconW + GRID_GAP) - GRID_GAP : 0;
   const selectedCenterX = selectedIndex * (iconW + GRID_GAP) + iconW / 2;
@@ -533,7 +595,7 @@ export function GridHome() {
   }
 
   const settingsBtnCenterX = screen.width - 62 - TOP_RIGHT_CLOCK_PUSH_PX;
-  const settingsBtnCenterY = 50;
+  const settingsBtnCenterY = HOME_TOP_BAR_ROW_CENTER_Y;
   const settingsBtnW = 80;
   const settingsBtnH = 58;
   const settingsCogSize = 36;
@@ -559,7 +621,7 @@ export function GridHome() {
     cornerIconX + cornerIconSize + topBarIconGap + SEARCH_BAR_SIDE_PADDING;
   const searchBarRight = searchIconX - 8 - SEARCH_BAR_SIDE_PADDING;
   const searchBarWidth = Math.max(0, searchBarRight - searchBarLeft);
-  const searchBarHeight = 36;
+  const searchBarHeight = HOME_SEARCH_BAR_HEIGHT_PX;
   const searchBarY = settingsBtnCenterY - searchBarHeight / 2;
 
   const navCenterLabel =
@@ -616,6 +678,16 @@ export function GridHome() {
           query={searchQuery}
           visible
           inputFocused={focusArea === "searchInput"}
+          fontSize={
+            focusArea === "searchInput"
+              ? SEARCH_BAR_FONT_SEARCH_INPUT_PX
+              : SEARCH_BAR_FONT_DEFAULT_PX
+          }
+          displayMaxChars={
+            focusArea === "searchInput"
+              ? SEARCH_BAR_DISPLAY_MAX_CHARS_SEARCH_INPUT
+              : SEARCH_BAR_DISPLAY_MAX_CHARS_DEFAULT
+          }
           onBarPress={onSearchBarPress}
         />
       )}
@@ -761,6 +833,9 @@ export function GridHome() {
               if (!searchFieldLocksNavigation) handleAppSelect(i);
             }}
             showTitle={settings.showAppTitles && !heroSplashInlineActive}
+            titleGapBelowIconPx={titleGapBelowIconPx}
+            titleFontSize={titleFontSize}
+            titleMaxChars={titleMaxChars}
             showLastPlayedEyebrow={
               settings.showLastPlayed &&
               lastPlayedId !== null &&

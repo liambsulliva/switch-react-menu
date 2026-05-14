@@ -10,6 +10,10 @@ export interface SearchBarProps {
   query: string;
   visible: boolean;
   inputFocused?: boolean;
+  /** Defaults to 22. */
+  fontSize?: number;
+  /** Max characters before ellipsis; default 42. */
+  displayMaxChars?: number;
   onBarPress?: () => void;
 }
 
@@ -21,6 +25,8 @@ export function SearchBar({
   query,
   visible,
   inputFocused = false,
+  fontSize = 22,
+  displayMaxChars = 42,
   onBarPress,
 }: SearchBarProps) {
   if (!visible || width <= 0) return null;
@@ -30,6 +36,10 @@ export function SearchBar({
   const fill = inputFocused ? COLORS.rowSelectedBg : COLORS.gray[800];
   const stroke = inputFocused ? COLORS.gray[0] : COLORS.gray[600];
   const strokeW = inputFocused ? 2 : 1;
+  const displayText =
+    display.length > displayMaxChars
+      ? `${display.slice(0, displayMaxChars - 1)}…`
+      : display;
 
   return (
     <>
@@ -49,11 +59,11 @@ export function SearchBar({
         x={x + 20}
         y={y + height / 2}
         fill={displayColor}
-        fontSize={22}
+        fontSize={fontSize}
         fontFamily="SourceSansPro-Regular"
         textBaseline="middle"
       >
-        {display.length > 42 ? `${display.slice(0, 39)}…` : display}
+        {displayText}
       </Text>
     </>
   );

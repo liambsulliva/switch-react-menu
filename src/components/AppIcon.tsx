@@ -18,6 +18,9 @@ interface AppIconProps {
   focusVerticalAlign?: AppIconFocusVerticalAlign;
   onSelect: () => void;
   showTitle?: boolean;
+  titleGapBelowIconPx?: number;
+  titleFontSize?: number;
+  titleMaxChars?: number;
   showLastPlayedEyebrow?: boolean;
 }
 
@@ -44,6 +47,9 @@ export function AppIcon({
   focusVerticalAlign = "bottom",
   onSelect,
   showTitle = true,
+  titleGapBelowIconPx = 20,
+  titleFontSize = 24,
+  titleMaxChars = 17,
   showLastPlayedEyebrow = false,
 }: AppIconProps) {
   const scale = isSelected ? SELECTED_ICON_SCALE : 1;
@@ -113,15 +119,15 @@ export function AppIcon({
       {showTitle && (
         <Text
           x={x + width / 2}
-          y={iconBottom + 20}
+          y={iconBottom + titleGapBelowIconPx}
           fill={isSelected ? COLORS.gray[0] : COLORS.gray[200]}
-          fontSize={24}
+          fontSize={titleFontSize}
           fontFamily={
             isSelected ? "SourceSansPro-Bold" : "SourceSansPro-Regular"
           }
           textAlign="center"
         >
-          {truncate(app.name, 17)}
+          {truncate(app.name, titleMaxChars)}
         </Text>
       )}
     </>
