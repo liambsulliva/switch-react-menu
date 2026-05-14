@@ -1,6 +1,13 @@
+import {
+  clearIconHeroRgbCache,
+  hydrateIconHeroRgbPairCache,
+  prewarmIconHeroRgbPairsForInstalledApps,
+  serializeIconHeroRgbPairsForApps,
+} from "./iconHeroGradientPalette";
 import type { RichGameDetails } from "./richGameDetails";
 import {
-  loadRichPersistentPayload,
+  loadPersistedIconHeroRgbIfSignatureMatches,
+  persistIconHeroRgbByKeyIfMetaSignatureMatches,
   saveRichPersistentPayload,
   type RichPersistentPayload,
 } from "./richDetailsPersistentCache";
@@ -99,7 +106,7 @@ async function readCatalogBytes(
   }
 }
 
-type InstalledAppForCatalog = Pick<Switch.Application, "id" | "name">;
+type InstalledAppForCatalog = Pick<Switch.Application, "id" | "name" | "icon">;
 
 export type InitializeRichDetailsCatalogOptions = {
   onProgress?: (ratio: number) => void;
@@ -143,12 +150,34 @@ export function getInstalledAppSignature(
   return signatureForInstalledApps(Array.from(installedApps));
 }
 
+export async function ensureIconHeroRgbPairsReady(
+  installedApps: readonly InstalledAppForCatalog[],
+  opts: { hardReloadNonce: number; installedSignature: string },
+): Promise<void> {
+  if (opts.hardReloadNonce === 0) {
+    const fromDisk = loadPersistedIconHeroRgbIfSignatureMatches(
+      opts.installedSignature,
+    );
+    if (fromDisk) hydrateIconHeroRgbPairCache(fromDisk);
+  }
+  const withIcons = installedApps.filter(
+    (a): a is InstalledAppForCatalog & { icon: ArrayBuffer } =>
+      a.icon != null && a.icon.byteLength > 0,
+  );
+  await prewarmIconHeroRgbPairsForInstalledApps(withIcons);
+  persistIconHeroRgbByKeyIfMetaSignatureMatches(
+    opts.installedSignature,
+    serializeIconHeroRgbPairsForApps(withIcons),
+  );
+}
+
 export function resetRichDetailsSessionForHardReload(): void {
   invalidateInstalledRichMatches();
   cachedBundledGames = null;
   lastCatalogGeneratedAt = null;
   catalogLoadPromise = null;
   installedMatchesByAppId.clear();
+  clearIconHeroRgbCache();
 }
 
 export function applyRichHydrationFromDisk(
@@ -163,11 +192,16 @@ export function applyRichHydrationFromDisk(
   lastCatalogGeneratedAt = payload.meta.catalogGeneratedAt ?? null;
   installedMatchSignature = payload.meta.installedSignature;
   installedMatchPromise = Promise.resolve();
+  hydrateIconHeroRgbPairCache(payload.iconHeroRgbByKey);
 }
 
 export async function persistRichCatalogAfterBootstrap(
   installedApps: readonly InstalledAppForCatalog[],
 ): Promise<void> {
+  const withIcons = installedApps.filter(
+    (a): a is InstalledAppForCatalog & { icon: ArrayBuffer } =>
+      a.icon != null && a.icon.byteLength > 0,
+  );
   await saveRichPersistentPayload({
     meta: {
       schema: 1,
@@ -176,6 +210,7 @@ export async function persistRichCatalogAfterBootstrap(
     },
     games: cachedBundledGames ?? [],
     matches: Object.fromEntries(installedMatchesByAppId),
+    iconHeroRgbByKey: serializeIconHeroRgbPairsForApps(withIcons),
   });
 }
 
@@ -389,6 +424,11 @@ export function initializeRichDetailsForInstalledApps(
         await yieldToHost();
       }
     }
+    const withIcons = apps.filter(
+      (a): a is InstalledAppForCatalog & { icon: ArrayBuffer } =>
+        a.icon != null && a.icon.byteLength > 0,
+    );
+    await prewarmIconHeroRgbPairsForInstalledApps(withIcons);
     report(1);
   })();
 

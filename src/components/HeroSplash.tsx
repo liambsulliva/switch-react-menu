@@ -10,13 +10,15 @@ import { Button } from "./Button";
 import { COLORS } from "../lib/colors";
 import type { HeroSplashInlineFetchState } from "../hooks/useHeroSplashInlineExperience";
 import type { HeroSplashInlineSubFocus } from "../hooks/useGamepadNavigation";
-import { formatRichReleaseDate, type RichTrailer } from "../lib/richGameDetails";
+import {
+  formatRichReleaseDate,
+  type RichTrailer,
+} from "../lib/richGameDetails";
 import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
 import { openSwitchWebApplet } from "../lib/switchWebApplet";
 import {
-  getTwoProminentColorsFromIconBytes,
+  getCachedIconHeroRgbPair,
   renderHeroGradientObjectUrl,
-  type Rgb,
 } from "../lib/iconHeroGradientPalette";
 
 const heroSplashIconUrlCache = new Map<string, string>();
@@ -109,26 +111,13 @@ export function HeroSplash({
 
   const useIconBackdropGradient = app.icon != null;
 
-  const [iconBackdropPair, setIconBackdropPair] = useState<{
-    a: Rgb;
-    b: Rgb;
-  } | null>(null);
+  const iconBackdropPair = useMemo(
+    () => getCachedIconHeroRgbPair(app.id, app.icon),
+    [app.id, app.icon?.byteLength ?? 0],
+  );
+
   const [heroGradientUrl, setHeroGradientUrl] = useState<string | null>(null);
   const heroGradientUrlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!useIconBackdropGradient || !app.icon) {
-      setIconBackdropPair(null);
-      return;
-    }
-    let cancelled = false;
-    void getTwoProminentColorsFromIconBytes(app.icon, app.id).then((pair) => {
-      if (!cancelled) setIconBackdropPair(pair);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [useIconBackdropGradient, app.icon, app.id]);
 
   useEffect(() => {
     if (!useIconBackdropGradient || !iconBackdropPair) {
@@ -190,9 +179,7 @@ export function HeroSplash({
   const yTitle = heroTop + padding;
 
   const heroTags =
-    state.status === "ok" && state.data?.tags?.length
-      ? state.data.tags
-      : [];
+    state.status === "ok" && state.data?.tags?.length ? state.data.tags : [];
 
   const badgeLayout = useMemo(() => {
     const MAX_TAGS = 10;
@@ -320,12 +307,7 @@ export function HeroSplash({
       rowScroll = Math.max(0, Math.min(idealScroll, maxScroll));
     }
     return { btnW, rowScroll };
-  }, [
-    trailers,
-    textW,
-    heroTrailerIndex,
-    trailerBtnGap,
-  ]);
+  }, [trailers, textW, heroTrailerIndex, trailerBtnGap]);
 
   return (
     <>
@@ -474,10 +456,7 @@ export function HeroSplash({
             trailerRowLayout &&
             trailers.map((t, i) => {
               const { btnW, rowScroll } = trailerRowLayout;
-              const bx =
-                textX +
-                i * (btnW + trailerBtnGap) -
-                rowScroll;
+              const bx = textX + i * (btnW + trailerBtnGap) - rowScroll;
               if (bx + btnW < textX - 2 || bx > textX + textW + 2) {
                 return null;
               }

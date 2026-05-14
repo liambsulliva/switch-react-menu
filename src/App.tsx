@@ -9,6 +9,7 @@ import { RichCatalogLoadingOverlay } from "./components/Loader";
 import {
   applyRichHydrationFromDisk,
   bumpInstalledTitlesRevision,
+  ensureIconHeroRgbPairsReady,
   getInstalledAppSignature,
   initializeRichDetailsForInstalledApps,
   persistRichCatalogAfterBootstrap,
@@ -17,14 +18,12 @@ import { useRichDetailsHardReloadNonce } from "./lib/richDetailsHardReloadStore"
 import { loadRichPersistentPayload } from "./lib/richDetailsPersistentCache";
 import { CompactHome } from "./navigation/CompactHome";
 import { GridHome } from "./navigation/GridHome";
-import { getSettings, useSettings } from "./settings/settingsStore";
+import { useSettings } from "./settings/settingsStore";
 
 export function App() {
   const settings = useSettings();
   const hardReloadNonce = useRichDetailsHardReloadNonce();
-  const [richCatalogReady, setRichCatalogReady] = useState(
-    () => getSettings().disableRichDetails,
-  );
+  const [richCatalogReady, setRichCatalogReady] = useState(false);
   const [richCatalogLoadProgress, setRichCatalogLoadProgress] = useState(0);
   const pendingProgressRef = useRef(0);
   const progressRafRef = useRef(0);
@@ -46,13 +45,8 @@ export function App() {
   );
 
   useLayoutEffect(() => {
-    if (settings.disableRichDetails) {
-      setRichCatalogReady(true);
-      setRichCatalogLoadProgress(1);
-    } else {
-      setRichCatalogReady(false);
-      setRichCatalogLoadProgress(0);
-    }
+    setRichCatalogReady(false);
+    setRichCatalogLoadProgress(0);
   }, [settings.disableRichDetails]);
 
   useLayoutEffect(() => {
@@ -68,12 +62,6 @@ export function App() {
   }, [hardReloadNonce, settings.disableRichDetails]);
 
   useEffect(() => {
-    if (settings.disableRichDetails) {
-      setRichCatalogReady(true);
-      setRichCatalogLoadProgress(1);
-      return;
-    }
-
     const gen = ++bootstrapGen.current;
     let alive = true;
     const installedApps = Array.from(Switch.Application).filter(
@@ -84,11 +72,27 @@ export function App() {
     const frame = requestAnimationFrame(() => {
       queueMicrotask(async () => {
         try {
+          if (settings.disableRichDetails) {
+            await ensureIconHeroRgbPairsReady(installedApps, {
+              hardReloadNonce,
+              installedSignature: sig,
+            });
+            if (!alive || bootstrapGen.current !== gen) return;
+            setRichCatalogLoadProgress(1);
+            setRichCatalogReady(true);
+            return;
+          }
+
           if (hardReloadNonce === 0) {
             const payload = await loadRichPersistentPayload(sig);
             if (!alive || bootstrapGen.current !== gen) return;
             if (payload) {
               applyRichHydrationFromDisk(payload);
+              await ensureIconHeroRgbPairsReady(installedApps, {
+                hardReloadNonce,
+                installedSignature: sig,
+              });
+              if (!alive || bootstrapGen.current !== gen) return;
               setRichCatalogLoadProgress(1);
               setRichCatalogReady(true);
               return;

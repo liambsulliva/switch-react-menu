@@ -1,8 +1,10 @@
+import type { IconHeroRgbPair } from "./iconHeroGradientPalette";
 import type { RichGameDetails } from "./richGameDetails";
 
 const SCHEMA = 1;
 const LS_META_KEY = "switch-react-menu-rich-cache-meta-v1";
 const LS_MATCHES_KEY = "switch-react-menu-rich-cache-matches-v1";
+const LS_ICON_HERO_KEY = "switch-react-menu-rich-cache-icon-hero-v1";
 const IDB_NAME = "switch-react-menu-rich";
 const IDB_STORE = "kv";
 const IDB_CATALOG_KEY = "catalogGamesJson";
@@ -17,6 +19,7 @@ export type RichPersistentPayload = {
   meta: RichPersistentMeta;
   games: RichGameDetails[];
   matches: Record<string, RichGameDetails | null>;
+  iconHeroRgbByKey?: Record<string, IconHeroRgbPair>;
 };
 
 function hasIndexedDB(): boolean {
@@ -128,11 +131,36 @@ function writeLsMatches(matches: Record<string, RichGameDetails | null>): void {
   }
 }
 
+function readLsIconHeroRgbByKey(): Record<string, IconHeroRgbPair> | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LS_ICON_HERO_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as Record<string, IconHeroRgbPair>;
+  } catch {
+    return null;
+  }
+}
+
+function writeLsIconHeroRgbByKey(
+  iconHeroRgbByKey: Record<string, IconHeroRgbPair>,
+): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(LS_ICON_HERO_KEY, JSON.stringify(iconHeroRgbByKey));
+  } catch {
+    /* quota */
+  }
+}
+
 export function clearRichPersistentCache(): void {
   if (typeof localStorage !== "undefined") {
     try {
       localStorage.removeItem(LS_META_KEY);
       localStorage.removeItem(LS_MATCHES_KEY);
+      localStorage.removeItem(LS_ICON_HERO_KEY);
     } catch {
       /* ignore */
     }
@@ -153,17 +181,19 @@ export async function loadRichPersistentPayload(
 
   if (!matches) return null;
 
+  const iconHeroRgbByKey = readLsIconHeroRgbByKey() ?? undefined;
+
   if (catalogJson) {
     try {
       const games = JSON.parse(catalogJson) as RichGameDetails[];
       if (!Array.isArray(games)) return null;
-      return { meta, games, matches };
+      return { meta, games, matches, iconHeroRgbByKey };
     } catch {
       return null;
     }
   }
 
-  return { meta, games: [], matches };
+  return { meta, games: [], matches, iconHeroRgbByKey };
 }
 
 export async function saveRichPersistentPayload(
@@ -171,6 +201,9 @@ export async function saveRichPersistentPayload(
 ): Promise<void> {
   writeLsMeta(payload.meta);
   writeLsMatches(payload.matches);
+  if (payload.iconHeroRgbByKey && Object.keys(payload.iconHeroRgbByKey).length > 0) {
+    writeLsIconHeroRgbByKey(payload.iconHeroRgbByKey);
+  }
   if (payload.games.length > 0 && hasIndexedDB()) {
     try {
       await idbSet(IDB_CATALOG_KEY, JSON.stringify(payload.games));
@@ -178,4 +211,22 @@ export async function saveRichPersistentPayload(
       /* catalog too large or IDB failed — matches still saved for fast resume */
     }
   }
+}
+
+export function loadPersistedIconHeroRgbIfSignatureMatches(
+  installedSignature: string,
+): Record<string, IconHeroRgbPair> | null {
+  const meta = readLsMeta();
+  if (!meta || meta.installedSignature !== installedSignature) return null;
+  return readLsIconHeroRgbByKey();
+}
+
+export function persistIconHeroRgbByKeyIfMetaSignatureMatches(
+  installedSignature: string,
+  iconHeroRgbByKey: Record<string, IconHeroRgbPair>,
+): void {
+  const meta = readLsMeta();
+  if (!meta || meta.installedSignature !== installedSignature) return;
+  if (Object.keys(iconHeroRgbByKey).length === 0) return;
+  writeLsIconHeroRgbByKey(iconHeroRgbByKey);
 }
