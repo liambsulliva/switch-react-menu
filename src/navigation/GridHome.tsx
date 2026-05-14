@@ -511,6 +511,7 @@ export function GridHome() {
 
   const navCenterLabel =
     appCount > 0 ? `${selectedIndex + 1} / ${appCount}` : undefined;
+  const searchFieldLocksNavigation = focusArea === "searchInput";
 
   return (
     <>
@@ -609,7 +610,9 @@ export function GridHome() {
           width={globeIconHitW}
           height={globeIconHitH}
           fill="transparent"
-          onTouchStart={() => openSwitchWebApplet()}
+          onTouchStart={() => {
+            if (!searchFieldLocksNavigation) openSwitchWebApplet();
+          }}
         />
       )}
 
@@ -633,7 +636,9 @@ export function GridHome() {
           width={albumIconHitW}
           height={albumIconHitH}
           fill="transparent"
-          onTouchStart={() => setShowAlbum(true)}
+          onTouchStart={() => {
+            if (!searchFieldLocksNavigation) setShowAlbum(true);
+          }}
         />
       )}
 
@@ -659,7 +664,9 @@ export function GridHome() {
           width={settingsBtnW}
           height={settingsBtnH}
           fill="transparent"
-          onTouchStart={() => setShowSettings(true)}
+          onTouchStart={() => {
+            if (!searchFieldLocksNavigation) setShowSettings(true);
+          }}
         />
       )}
 
@@ -692,7 +699,9 @@ export function GridHome() {
             truncate={truncate}
             isSelected={appIconSelected}
             focusVerticalAlign={heroSplashInlineActive ? "top" : "bottom"}
-            onSelect={() => handleAppSelect(i)}
+            onSelect={() => {
+              if (!searchFieldLocksNavigation) handleAppSelect(i);
+            }}
             showTitle={settings.showAppTitles && !heroSplashInlineActive}
             showLastPlayedEyebrow={
               settings.showLastPlayed &&
@@ -707,8 +716,8 @@ export function GridHome() {
         <Navigation
           currentPage={selectedIndex}
           totalPages={appCount}
-          onPrevPage={onStepPrev}
-          onNextPage={onStepNext}
+          onPrevPage={searchFieldLocksNavigation ? () => {} : onStepPrev}
+          onNextPage={searchFieldLocksNavigation ? () => {} : onStepNext}
           isNavigationFocused={focusArea === "navigation"}
           selectedNavButton={selectedNavButton}
           navigationStyle={settings.navigationStyle}

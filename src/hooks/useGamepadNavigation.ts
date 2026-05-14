@@ -353,7 +353,9 @@ export function useGamepadNavigation({
           ...prev,
           directionalPressed: { ...prev.directionalPressed, Up: true },
         }));
-        if (
+        if (focusArea === "searchInput") {
+          // Search field + OS keyboard own vertical navigation; do not move focus.
+        } else if (
           replaceBottomNavWithHeroSplash &&
           focusArea === "apps" &&
           inlineDetailsOpen
@@ -367,7 +369,6 @@ export function useGamepadNavigation({
           setFocusArea((prev) => {
             if (prev === "navigation") return "apps";
             if (prev === "apps") return "album";
-            if (prev === "searchInput") return "search";
             return prev;
           });
         }
@@ -388,7 +389,9 @@ export function useGamepadNavigation({
           ...prev,
           directionalPressed: { ...prev.directionalPressed, Down: true },
         }));
-        if (replaceBottomNavWithHeroSplash && focusArea === "apps") {
+        if (focusArea === "searchInput") {
+          // Search field + OS keyboard own vertical navigation; do not move focus.
+        } else if (replaceBottomNavWithHeroSplash && focusArea === "apps") {
           if (!inlineDetailsOpen) {
             onOpenInlineDetails?.();
           } else if (
@@ -404,8 +407,7 @@ export function useGamepadNavigation({
               prev === "settings" ||
               prev === "album" ||
               prev === "globe" ||
-              prev === "search" ||
-              prev === "searchInput"
+              prev === "search"
             )
               return "apps";
             if (prev === "apps") return "navigation";
