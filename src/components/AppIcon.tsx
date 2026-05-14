@@ -2,6 +2,11 @@ import React from "react";
 import { Image, Text, Rect } from "react-tela";
 import { COLORS } from "../lib/colors";
 
+export const APP_ICON_SELECTED_FOCUS_SCALE = 1.08;
+const SELECTED_ICON_SCALE = APP_ICON_SELECTED_FOCUS_SCALE;
+
+export type AppIconFocusVerticalAlign = "bottom" | "top";
+
 interface AppIconProps {
   app: Switch.Application;
   x: number;
@@ -10,6 +15,7 @@ interface AppIconProps {
   height: number;
   truncate: (str: string, maxLength: number) => string;
   isSelected?: boolean;
+  focusVerticalAlign?: AppIconFocusVerticalAlign;
   onSelect: () => void;
   showTitle?: boolean;
   showLastPlayedEyebrow?: boolean;
@@ -35,18 +41,43 @@ export function AppIcon({
   height,
   truncate,
   isSelected,
+  focusVerticalAlign = "bottom",
   onSelect,
   showTitle = true,
   showLastPlayedEyebrow = false,
 }: AppIconProps) {
+  const scale = isSelected ? SELECTED_ICON_SCALE : 1;
+  const drawW = width * scale;
+  const drawH = height * scale;
+  const drawX = x + (width - drawW) / 2;
+  const drawY =
+    isSelected && focusVerticalAlign === "top"
+      ? y
+      : isSelected && focusVerticalAlign === "bottom"
+        ? y + height - drawH
+        : y;
+
   const iconBottom = y + height;
+  const selectionPad = 5;
+  const focusFrame =
+    isSelected
+      ? {
+          x: drawX - selectionPad,
+          y: drawY - selectionPad,
+          w: drawW + selectionPad * 2,
+          h: drawH + selectionPad * 2,
+        }
+      : null;
+  const eyebrowX = (focusFrame?.x ?? drawX) - (isSelected ? 3 : 0);
+  const eyebrowY = (focusFrame?.y ?? drawY) - (isSelected ? 3 : 0);
+  
 
   return (
     <>
       {showLastPlayedEyebrow && (
         <Text
-          x={x}
-          y={y - 6}
+          x={eyebrowX}
+          y={eyebrowY}
           fill={COLORS.eyebrowLabel}
           fontSize={16}
           fontFamily="SourceSansPro-Bold"
@@ -58,12 +89,12 @@ export function AppIcon({
       )}
       {app.icon && (
         <>
-          {isSelected && (
+          {focusFrame && (
             <Rect
-              x={x - 5}
-              y={y - 5}
-              width={width + 10}
-              height={height + 10}
+              x={focusFrame.x}
+              y={focusFrame.y}
+              width={focusFrame.w}
+              height={focusFrame.h}
               fill="none"
               stroke={COLORS.gray[0]}
               lineWidth={5}
@@ -71,10 +102,10 @@ export function AppIcon({
           )}
           <Image
             src={getIconUrl(app, app.icon)}
-            x={x}
-            y={y}
-            width={width}
-            height={height}
+            x={focusFrame?.x ?? drawX}
+            y={focusFrame?.y ?? drawY}
+            width={focusFrame?.w ?? drawW}
+            height={focusFrame?.h ?? drawH}
             onTouchStart={onSelect}
           />
         </>

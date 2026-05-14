@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { Image, Rect } from "react-tela";
 import { truncate } from "../lib/truncate";
-import { AppIcon } from "../components/AppIcon";
+import { AppIcon, APP_ICON_SELECTED_FOCUS_SCALE } from "../components/AppIcon";
 import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
 import { Modal } from "../components/Modal";
 import { Navigation } from "../components/Navigation";
@@ -103,12 +103,12 @@ export function GridHome() {
   const [globeIconFocusedSrc, setGlobeIconFocusedSrc] = useState<string | null>(
     null,
   );
-  const [searchIconDefaultSrc, setSearchIconDefaultSrc] = useState<string | null>(
-    null,
-  );
-  const [searchIconFocusedSrc, setSearchIconFocusedSrc] = useState<string | null>(
-    null,
-  );
+  const [searchIconDefaultSrc, setSearchIconDefaultSrc] = useState<
+    string | null
+  >(null);
+  const [searchIconFocusedSrc, setSearchIconFocusedSrc] = useState<
+    string | null
+  >(null);
 
   const sortedApps = useMemo(
     () => sortApplicationsForMode(rawApps, settings.sortingMode, customOrder),
@@ -271,7 +271,8 @@ export function GridHome() {
     setHeroTrailerIndex(0);
   }, []);
 
-  const selectedApp = appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
+  const selectedApp =
+    appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
   const heroSplashInlineActive =
     heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
 
@@ -343,7 +344,9 @@ export function GridHome() {
   const onSearchSubmit = useCallback(() => {
     const vk = (
       navigator as Navigator & {
-        virtualKeyboard?: EventTarget & { dispatchEvent?: (e: Event) => boolean };
+        virtualKeyboard?: EventTarget & {
+          dispatchEvent?: (e: Event) => boolean;
+        };
       }
     ).virtualKeyboard;
     if (vk && typeof vk.dispatchEvent === "function") {
@@ -664,7 +667,17 @@ export function GridHome() {
         const baseX = i * (iconW + GRID_GAP);
         const renderX = gridViewportX + baseX - scrollX;
 
-        if (renderX + iconW < gridViewportX || renderX > gridViewportRight) {
+        const appIconSelected =
+          focusArea === "apps" &&
+          i === selectedIndex &&
+          (!heroSplashInlineOpen || heroInlineSubFocus !== "trailers");
+        const focusScaleSlopX =
+          (iconW * (APP_ICON_SELECTED_FOCUS_SCALE - 1)) / 2;
+        const cullSlopX = appIconSelected ? focusScaleSlopX : 0;
+        if (
+          renderX + iconW + cullSlopX < gridViewportX ||
+          renderX - cullSlopX > gridViewportRight
+        ) {
           return null;
         }
 
@@ -677,11 +690,8 @@ export function GridHome() {
             width={iconW}
             height={iconH}
             truncate={truncate}
-            isSelected={
-              focusArea === "apps" &&
-              i === selectedIndex &&
-              (!heroSplashInlineOpen || heroInlineSubFocus !== "trailers")
-            }
+            isSelected={appIconSelected}
+            focusVerticalAlign={heroSplashInlineActive ? "top" : "bottom"}
             onSelect={() => handleAppSelect(i)}
             showTitle={settings.showAppTitles && !heroSplashInlineActive}
             showLastPlayedEyebrow={

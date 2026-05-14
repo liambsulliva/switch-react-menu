@@ -84,6 +84,7 @@ export type HeroSplashProps = {
 };
 
 const IMAGE_EXTRA = 1.55;
+const HERO_INLINE_CONTENT_DROP_PX = 10;
 
 // nx.js `Text` metrics differ from browser canvas... nudge title up a tad on bare-metal hardware.
 const HERO_TITLE_Y_BARE_METAL_NUDGE = -6;
@@ -178,7 +179,7 @@ export function HeroSplash({
   const textW = screen.width - textX - padding;
   const charsPerLine = Math.max(20, Math.floor(textW / 10));
 
-  const yTitleRow = heroTop + padding;
+  const yTitleRow = heroTop + padding + HERO_INLINE_CONTENT_DROP_PX;
   const isBrowserPolyfillPreview = getBrowserDocument() !== undefined;
   const yTitle =
     yTitleRow +
