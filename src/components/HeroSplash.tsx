@@ -1,8 +1,12 @@
 import React, { useMemo } from "react";
 import { Image, Rect, Text } from "react-tela";
+import { Button } from "./Button";
 import { COLORS } from "../lib/colors";
 import type { HeroSplashInlineFetchState } from "../hooks/useHeroSplashInlineExperience";
-import { formatRichReleaseDate, RichTrailer } from "../lib/richGameDetails";
+import type { HeroSplashInlineSubFocus } from "../hooks/useGamepadNavigation";
+import { formatRichReleaseDate, type RichTrailer } from "../lib/richGameDetails";
+import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
+import { openSwitchWebApplet } from "../lib/switchWebApplet";
 import { canFetchRemoteRichAssets } from "../lib/remoteRichAssets";
 
 const iconUrlCache = new Map<string, string>();
@@ -61,6 +65,10 @@ export type HeroSplashProps = {
   fallbackImageUrl: string | null;
   app: Switch.Application;
   fetchState: HeroSplashInlineFetchState;
+  /** When `"trailers"`, the trailer row shows a gamepad selection ring. */
+  heroInlineSubFocus?: HeroSplashInlineSubFocus;
+  /** Index of the highlighted trailer when `heroInlineSubFocus === "trailers"`. */
+  heroTrailerIndex?: number;
 };
 
 const IMAGE_EXTRA = 1.55;
@@ -71,6 +79,8 @@ export function HeroSplash({
   fallbackImageUrl,
   app,
   fetchState,
+  heroInlineSubFocus = "content",
+  heroTrailerIndex = 0,
 }: HeroSplashProps) {
   const pan = Math.max(0, Math.min(1, panT));
   const HERO_H = Math.min(screen.height - 48, Math.floor(screen.height * 0.56));
@@ -126,10 +136,40 @@ export function HeroSplash({
     state.status === "ok" && state.data?.summary
       ? wrapSummary(state.data.summary, charsPerLine, maxSummaryLines)
       : [];
-  const trailers =
-    state.status === "ok" && state.data?.trailers
-      ? state.data.trailers.slice(0, 3)
-      : [];
+  const trailers: RichTrailer[] =
+    state.status === "ok" && state.data?.trailers ? state.data.trailers : [];
+
+  const trailerBtnH = 38;
+  const trailerBtnGap = 10;
+  const trailerBlockTop =
+    summaryStartY +
+    summaryLines.length * 20 +
+    (summaryLines.length > 0 ? 14 : 8);
+
+  const trailerRowLayout = useMemo(() => {
+    const n = trailers.length;
+    if (n === 0) return null;
+    const fixedW = 168;
+    const totalFixed = n * fixedW + (n - 1) * trailerBtnGap;
+    let btnW: number;
+    let rowScroll = 0;
+    if (totalFixed <= textW) {
+      btnW = (textW - (n - 1) * trailerBtnGap) / n;
+    } else {
+      btnW = fixedW;
+      const rowW = n * btnW + (n - 1) * trailerBtnGap;
+      const maxScroll = Math.max(0, rowW - textW);
+      const focusLeft = heroTrailerIndex * (btnW + trailerBtnGap);
+      const idealScroll = focusLeft + btnW / 2 - textW / 2;
+      rowScroll = Math.max(0, Math.min(idealScroll, maxScroll));
+    }
+    return { btnW, rowScroll };
+  }, [
+    trailers,
+    textW,
+    heroTrailerIndex,
+    trailerBtnGap,
+  ]);
 
   return (
     <>
@@ -285,20 +325,37 @@ export function HeroSplash({
               No description in the DB for this search.
             </Text>
           )}
-          {trailers.map((t: RichTrailer, i: number) => (
-            <Text
-              key={`tr-${t.youtubeId}`}
-              x={textX}
-              y={summaryStartY + summaryLines.length * 20 + 6 + i * 20}
-              fill={COLORS.gray[300]}
-              fontSize={16}
-              fontFamily="SourceSansPro-Regular"
-              textAlign="left"
-              textBaseline="top"
-            >
-              {`${t.name}: youtube.com/watch?v=${t.youtubeId}`}
-            </Text>
-          ))}
+          {trailers.length > 0 &&
+            trailerRowLayout &&
+            trailers.map((t, i) => {
+              const { btnW, rowScroll } = trailerRowLayout;
+              const bx =
+                textX +
+                i * (btnW + trailerBtnGap) -
+                rowScroll;
+              if (bx + btnW < textX - 2 || bx > textX + textW + 2) {
+                return null;
+              }
+              const labelMax = Math.max(6, Math.floor((btnW - 24) / 9));
+              const label = truncateEnd(
+                t.name?.trim() || "Watch trailer",
+                labelMax,
+              );
+              const highlighted =
+                heroInlineSubFocus === "trailers" && i === heroTrailerIndex;
+              return (
+                <Button
+                  key={`tr-${t.youtubeId}-${i}`}
+                  x={bx}
+                  y={trailerBlockTop}
+                  width={btnW}
+                  height={trailerBtnH}
+                  label={label}
+                  isHighlighted={highlighted}
+                  onPress={() => openSwitchWebApplet(richTrailerWatchUrl(t))}
+                />
+              );
+            })}
         </>
       )}
     </>

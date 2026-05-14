@@ -23,6 +23,7 @@ import {
 import {
   useGamepadNavigation,
   type GridHomeFocusArea,
+  type HeroSplashInlineSubFocus,
 } from "../hooks/useGamepadNavigation";
 import {
   registerAppLaunch,
@@ -42,19 +43,12 @@ import { HeroSplash } from "../components/HeroSplash";
 import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
 import { easeOutDetailEntrance } from "../lib/easing";
 import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
-
-const GRID_HOME_WEB_APPLET_URL = "https://google.com";
+import { openSwitchWebApplet } from "../lib/switchWebApplet";
+import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
 
 const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
 const GRID_SIDE_MARGIN = 24;
-
-function openSwitchWebApplet(url: string = GRID_HOME_WEB_APPLET_URL) {
-  void (async () => {
-    const applet = new Switch.WebApplet(url);
-    await applet.start({ jsExtension: true });
-  })();
-}
 
 export function GridHome() {
   const settings = useSettings();
@@ -76,6 +70,9 @@ export function GridHome() {
   const [showCustomSort, setShowCustomSort] = useState(false);
   const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
   const [heroSplashInlineOpen, setHeroSplashInlineOpen] = useState(false);
+  const [heroInlineSubFocus, setHeroInlineSubFocus] =
+    useState<HeroSplashInlineSubFocus>("content");
+  const [heroTrailerIndex, setHeroTrailerIndex] = useState(0);
   const [heroPanT, setHeroPanT] = useState(0);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
@@ -229,8 +226,17 @@ export function GridHome() {
     setSelectedIndex((i) => Math.min(Math.max(0, appCount - 1), i + 1));
   }, [appCount]);
 
-  const openHeroSplashInline = useCallback(() => setHeroSplashInlineOpen(true), []);
-  const closeHeroSplashInline = useCallback(() => setHeroSplashInlineOpen(false), []);
+  const openHeroSplashInline = useCallback(() => {
+    setHeroSplashInlineOpen(true);
+    setHeroInlineSubFocus("content");
+    setHeroTrailerIndex(0);
+  }, []);
+
+  const closeHeroSplashInline = useCallback(() => {
+    setHeroSplashInlineOpen(false);
+    setHeroInlineSubFocus("content");
+    setHeroTrailerIndex(0);
+  }, []);
 
   const selectedApp = appCount > 0 ? (apps[selectedIndex] ?? null) : null;
   const heroSplashInlineActive =
@@ -238,6 +244,37 @@ export function GridHome() {
 
   const { fetchState, backgroundImageUrl, fallbackImageUrl } =
     useHeroSplashInlineExperience(selectedApp, heroSplashInlineActive);
+
+  const heroTrailerCount = useMemo(() => {
+    if (!heroSplashInlineActive) return 0;
+    if (fetchState.status !== "ok" || !fetchState.data?.trailers) return 0;
+    return fetchState.data.trailers.length;
+  }, [heroSplashInlineActive, fetchState]);
+
+  const onHeroTrailerActivate = useCallback(() => {
+    if (fetchState.status !== "ok" || !fetchState.data?.trailers) return;
+    const t = fetchState.data.trailers[heroTrailerIndex];
+    if (t) openSwitchWebApplet(richTrailerWatchUrl(t));
+  }, [fetchState, heroTrailerIndex]);
+
+  useEffect(() => {
+    if (!heroSplashInlineOpen) return;
+    setHeroInlineSubFocus("content");
+    setHeroTrailerIndex(0);
+  }, [selectedApp?.id, heroSplashInlineOpen]);
+
+  useEffect(() => {
+    if (!heroSplashInlineActive) return;
+    if (heroInlineSubFocus !== "trailers") return;
+    if (heroTrailerCount === 0) {
+      setHeroInlineSubFocus("content");
+    }
+  }, [heroSplashInlineActive, heroInlineSubFocus, heroTrailerCount]);
+
+  useEffect(() => {
+    if (heroTrailerCount <= 0) return;
+    setHeroTrailerIndex((i) => Math.min(i, heroTrailerCount - 1));
+  }, [heroTrailerCount]);
 
   useEffect(() => {
     if (!heroSplashInlineActive) {
@@ -282,6 +319,11 @@ export function GridHome() {
     inlineDetailsOpen: heroSplashInlineOpen,
     onOpenInlineDetails: openHeroSplashInline,
     onCloseInlineDetails: closeHeroSplashInline,
+    heroInlineSubFocus,
+    setHeroInlineSubFocus,
+    heroTrailerCount,
+    setHeroTrailerIndex,
+    onHeroTrailerActivate,
   });
 
   const handleAppSelect = (index: number) => {
@@ -380,6 +422,8 @@ export function GridHome() {
           fallbackImageUrl={fallbackImageUrl}
           app={selectedApp}
           fetchState={fetchState}
+          heroInlineSubFocus={heroInlineSubFocus}
+          heroTrailerIndex={heroTrailerIndex}
         />
       )}
 
@@ -478,7 +522,11 @@ export function GridHome() {
             width={iconW}
             height={iconH}
             truncate={truncate}
-            isSelected={focusArea === "apps" && i === selectedIndex}
+            isSelected={
+              focusArea === "apps" &&
+              i === selectedIndex &&
+              (!heroSplashInlineOpen || heroInlineSubFocus !== "trailers")
+            }
             onSelect={() => handleAppSelect(i)}
             showTitle={settings.showAppTitles}
             showLastPlayedEyebrow={

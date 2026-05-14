@@ -9,6 +9,8 @@ export type GridHomeFocusArea =
   | "album"
   | "globe";
 
+export type HeroSplashInlineSubFocus = "content" | "trailers";
+
 interface GamepadNavigationProps {
   apps: Switch.Application[];
   jumpStep: number;
@@ -29,6 +31,11 @@ interface GamepadNavigationProps {
   inlineDetailsOpen?: boolean;
   onOpenInlineDetails?: () => void;
   onCloseInlineDetails?: () => void;
+  heroInlineSubFocus?: HeroSplashInlineSubFocus;
+  setHeroInlineSubFocus?: (next: HeroSplashInlineSubFocus) => void;
+  heroTrailerCount?: number;
+  setHeroTrailerIndex?: (update: (prev: number) => number) => void;
+  onHeroTrailerActivate?: () => void;
 }
 
 interface GamepadState {
@@ -75,6 +82,11 @@ export function useGamepadNavigation({
   inlineDetailsOpen = false,
   onOpenInlineDetails,
   onCloseInlineDetails,
+  heroInlineSubFocus = "content",
+  setHeroInlineSubFocus,
+  heroTrailerCount = 0,
+  setHeroTrailerIndex,
+  onHeroTrailerActivate,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
     shouldersPressed: { L: false, R: false },
@@ -102,6 +114,16 @@ export function useGamepadNavigation({
     const appCount = apps.length;
 
     const handleLeftPress = () => {
+      if (
+        replaceBottomNavWithHeroSplash &&
+        inlineDetailsOpen &&
+        focusArea === "apps" &&
+        heroInlineSubFocus === "trailers" &&
+        heroTrailerCount > 0
+      ) {
+        setHeroTrailerIndex?.((prev) => Math.max(0, prev - 1));
+        return;
+      }
       if (focusArea === "settings") {
         setFocusArea(() => "album");
       } else if (focusArea === "album") {
@@ -114,6 +136,18 @@ export function useGamepadNavigation({
     };
 
     const handleRightPress = () => {
+      if (
+        replaceBottomNavWithHeroSplash &&
+        inlineDetailsOpen &&
+        focusArea === "apps" &&
+        heroInlineSubFocus === "trailers" &&
+        heroTrailerCount > 0
+      ) {
+        setHeroTrailerIndex?.((prev) =>
+          Math.min(heroTrailerCount - 1, prev + 1),
+        );
+        return;
+      }
       if (focusArea === "album") {
         setFocusArea(() => "settings");
       } else if (focusArea === "globe") {
@@ -175,7 +209,15 @@ export function useGamepadNavigation({
           ...prev,
           shouldersPressed: { ...prev.shouldersPressed, L: true },
         }));
-        if (focusArea === "apps" && appCount > 0) {
+        if (
+          focusArea === "apps" &&
+          appCount > 0 &&
+          !(
+            replaceBottomNavWithHeroSplash &&
+            inlineDetailsOpen &&
+            heroInlineSubFocus === "trailers"
+          )
+        ) {
           setSelectedIndex((prev) => Math.max(0, prev - jumpStep));
         }
       } else if (
@@ -196,7 +238,15 @@ export function useGamepadNavigation({
           ...prev,
           shouldersPressed: { ...prev.shouldersPressed, R: true },
         }));
-        if (focusArea === "apps" && appCount > 0) {
+        if (
+          focusArea === "apps" &&
+          appCount > 0 &&
+          !(
+            replaceBottomNavWithHeroSplash &&
+            inlineDetailsOpen &&
+            heroInlineSubFocus === "trailers"
+          )
+        ) {
           setSelectedIndex((prev) =>
             Math.min(appCount - 1, prev + jumpStep),
           );
@@ -280,7 +330,11 @@ export function useGamepadNavigation({
           focusArea === "apps" &&
           inlineDetailsOpen
         ) {
-          onCloseInlineDetails?.();
+          if (heroInlineSubFocus === "trailers") {
+            setHeroInlineSubFocus?.("content");
+          } else {
+            onCloseInlineDetails?.();
+          }
         } else {
           setFocusArea((prev) => {
             if (prev === "navigation") return "apps";
@@ -306,7 +360,15 @@ export function useGamepadNavigation({
           directionalPressed: { ...prev.directionalPressed, Down: true },
         }));
         if (replaceBottomNavWithHeroSplash && focusArea === "apps") {
-          onOpenInlineDetails?.();
+          if (!inlineDetailsOpen) {
+            onOpenInlineDetails?.();
+          } else if (
+            heroInlineSubFocus === "content" &&
+            heroTrailerCount > 0
+          ) {
+            setHeroInlineSubFocus?.("trailers");
+            setHeroTrailerIndex?.(() => 0);
+          }
         } else {
           setFocusArea((prev) => {
             if (prev === "settings" || prev === "album" || prev === "globe")
@@ -326,10 +388,19 @@ export function useGamepadNavigation({
       if (gamepad.buttons[Button.A].pressed && !gamepadState.aPressed) {
         setGamepadState((prev) => ({ ...prev, aPressed: true }));
         if (focusArea === "apps") {
-          const app = apps[selectedIndex];
-          if (app) {
-            registerAppLaunch(app);
-            app.launch();
+          if (
+            replaceBottomNavWithHeroSplash &&
+            inlineDetailsOpen &&
+            heroInlineSubFocus === "trailers" &&
+            heroTrailerCount > 0
+          ) {
+            onHeroTrailerActivate?.();
+          } else {
+            const app = apps[selectedIndex];
+            if (app) {
+              registerAppLaunch(app);
+              app.launch();
+            }
           }
         } else if (focusArea === "navigation") {
           if (navButtonIndex === 0) {
@@ -377,5 +448,10 @@ export function useGamepadNavigation({
     inlineDetailsOpen,
     onOpenInlineDetails,
     onCloseInlineDetails,
+    heroInlineSubFocus,
+    setHeroInlineSubFocus,
+    heroTrailerCount,
+    setHeroTrailerIndex,
+    onHeroTrailerActivate,
   ]);
 }
