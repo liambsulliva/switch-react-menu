@@ -415,11 +415,13 @@ export function GridHome() {
         fill={COLORS.background}
       />
 
-      <DigitalClock
-        x={screen.width - GRID_SIDE_MARGIN - TOP_RIGHT_CLOCK_SCREEN_INSET_PX}
-        y={settingsBtnCenterY}
-        fontSize={26}
-      />
+      {!heroSplashInlineActive && (
+        <DigitalClock
+          x={screen.width - GRID_SIDE_MARGIN - TOP_RIGHT_CLOCK_SCREEN_INSET_PX}
+          y={settingsBtnCenterY}
+          fontSize={26}
+        />
+      )}
 
       {heroSplashInlineActive && selectedApp && (
         <HeroSplash
@@ -540,7 +542,7 @@ export function GridHome() {
               (!heroSplashInlineOpen || heroInlineSubFocus !== "trailers")
             }
             onSelect={() => handleAppSelect(i)}
-            showTitle={settings.showAppTitles}
+            showTitle={settings.showAppTitles && !heroSplashInlineActive}
             showLastPlayedEyebrow={
               settings.showLastPlayed &&
               lastPlayedId !== null &&
