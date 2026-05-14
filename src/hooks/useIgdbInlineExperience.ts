@@ -19,17 +19,22 @@ export function useIgdbInlineExperience(
   enabled: boolean,
 ): {
   fetchState: IgdbInlineFetchState;
-  heroImageUrl: string | null;
+  backgroundImageUrl: string | null;
+  fallbackImageUrl: string | null;
 } {
   const [fetchState, setFetchState] = useState<IgdbInlineFetchState>({
     status: "idle",
   });
-  const [heroImageUrl, setHeroImageUrl] = useState<string | null>(null);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(
+    null,
+  );
+  const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !app) {
       setFetchState({ status: "idle" });
-      setHeroImageUrl(null);
+      setBackgroundImageUrl(null);
+      setFallbackImageUrl(null);
       return;
     }
 
@@ -37,18 +42,19 @@ export function useIgdbInlineExperience(
     setFetchState({ status: "loading" });
 
     const localIconUrl = appIconObjectUrl(app);
-    setHeroImageUrl(localIconUrl);
+    setBackgroundImageUrl(localIconUrl);
+    setFallbackImageUrl(localIconUrl);
 
     void (async () => {
       try {
         const bundled = await getInstalledIgdbMatch(app);
         if (ac.signal.aborted) return;
         setFetchState({ status: "ok", data: bundled });
-        const cover =
-          canFetchRemoteIgdbUrls() && bundled?.coverUrl
-            ? bundled.coverUrl
+        const background =
+          canFetchRemoteIgdbUrls() && bundled?.backgroundUrl
+            ? bundled.backgroundUrl
             : localIconUrl;
-        setHeroImageUrl(cover);
+        setBackgroundImageUrl(background);
       } catch (err: unknown) {
         if (ac.signal.aborted) return;
         const message = err instanceof Error ? err.message : "Request failed";
@@ -62,5 +68,5 @@ export function useIgdbInlineExperience(
     };
   }, [enabled, app?.id, app?.name]);
 
-  return { fetchState, heroImageUrl };
+  return { fetchState, backgroundImageUrl, fallbackImageUrl };
 }

@@ -52,6 +52,8 @@ function parseCatalogBuffer(buf: ArrayBuffer): IgdbBundledCatalogFile {
       firstReleaseDate:
         typeof r.firstReleaseDate === "number" ? r.firstReleaseDate : null,
       coverUrl: typeof r.coverUrl === "string" ? r.coverUrl : null,
+      backgroundUrl:
+        typeof r.backgroundUrl === "string" ? r.backgroundUrl : null,
       trailers,
     });
   }

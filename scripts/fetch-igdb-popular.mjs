@@ -8,7 +8,6 @@ const OUT = path.join(ROOT, "public", "igdb-popular-games.json");
 
 /** IGDB platform id for “Nintendo Switch” (not Switch 2). */
 const NINTENDO_SWITCH_PLATFORM_ID = 130;
-const TARGET_SWITCH_GAMES = 5000;
 const GAMES_PAGE_LIMIT = 500;
 const VIDEO_CHUNK = 400;
 const MS_BETWEEN_REQUESTS = 260;
@@ -63,6 +62,13 @@ function coverUrl(imageId) {
   return `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg`;
 }
 
+function backgroundUrl(game) {
+  const imageId =
+    game?.screenshots?.[0]?.image_id ?? game?.artworks?.[0]?.image_id ?? null;
+  if (!imageId) return null;
+  return `https://images.igdb.com/igdb/image/upload/t_screenshot_huge/${imageId}.jpg`;
+}
+
 async function twitchToken(id, secret) {
   const body = new URLSearchParams({
     client_id: id,
@@ -103,16 +109,15 @@ async function fetchAllSwitchGames(clientId, token) {
   const games = [];
   let offset = 0;
 
-  while (games.length < TARGET_SWITCH_GAMES) {
-    const pageSize = Math.min(
-      GAMES_PAGE_LIMIT,
-      TARGET_SWITCH_GAMES - games.length,
-    );
+  while (true) {
     const body = [
-      "fields name,summary,first_release_date,cover.image_id,videos,id;",
+      [
+        "fields name,summary,first_release_date,cover.image_id",
+        "screenshots.image_id,artworks.image_id,videos,id;",
+      ].join(","),
       `where platforms = (${NINTENDO_SWITCH_PLATFORM_ID}) & version_parent = null;`,
       "sort total_rating_count desc;",
-      `limit ${pageSize};`,
+      `limit ${GAMES_PAGE_LIMIT};`,
       `offset ${offset};`,
     ].join("\n");
 
@@ -125,10 +130,9 @@ async function fetchAllSwitchGames(clientId, token) {
       if (typeof gid !== "number" || seen.has(gid)) continue;
       seen.add(gid);
       games.push(g);
-      if (games.length >= TARGET_SWITCH_GAMES) break;
     }
 
-    if (page.length < pageSize) break;
+    if (page.length < GAMES_PAGE_LIMIT) break;
     offset += page.length;
   }
 
@@ -203,9 +207,9 @@ async function main() {
   const token = await twitchToken(id, secret);
 
   const games = await fetchAllSwitchGames(id, token);
-  if (games.length < TARGET_SWITCH_GAMES) {
+  if (games.length === 0) {
     throw new Error(
-      `Only ${games.length} Nintendo Switch games returned from IGDB (need ${TARGET_SWITCH_GAMES}).`,
+      "No Nintendo Switch games returned from IGDB (check credentials / query).",
     );
   }
 
@@ -222,14 +226,9 @@ async function main() {
       firstReleaseDate:
         typeof g.first_release_date === "number" ? g.first_release_date : null,
       coverUrl: coverUrl(g.cover?.image_id),
+      backgroundUrl: backgroundUrl(g),
       trailers: trailersForGame(g.videos, videoById),
     });
-  }
-
-  if (outGames.length < TARGET_SWITCH_GAMES) {
-    throw new Error(
-      `After parsing, only ${outGames.length} Switch games (need ${TARGET_SWITCH_GAMES}).`,
-    );
   }
 
   const payload = {

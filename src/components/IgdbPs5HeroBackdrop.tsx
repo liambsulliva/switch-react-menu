@@ -57,7 +57,8 @@ function wrapSummary(
 
 export type IgdbPs5HeroBackdropProps = {
   panT: number;
-  imageUrl: string | null;
+  backgroundImageUrl: string | null;
+  fallbackImageUrl: string | null;
   app: Switch.Application;
   fetchState: IgdbInlineFetchState;
 };
@@ -66,7 +67,8 @@ const IMAGE_EXTRA = 1.55;
 
 export function IgdbPs5HeroBackdrop({
   panT,
-  imageUrl,
+  backgroundImageUrl,
+  fallbackImageUrl,
   app,
   fetchState,
 }: IgdbPs5HeroBackdropProps) {
@@ -85,10 +87,17 @@ export function IgdbPs5HeroBackdrop({
     [app],
   );
 
+  const canUseRemoteImages = canFetchRemoteIgdbUrls();
   const coverSrc =
-    state.status === "ok" && state.data?.coverUrl && canFetchRemoteIgdbUrls()
+    state.status === "ok" && state.data?.coverUrl && canUseRemoteImages
       ? state.data.coverUrl
-      : (imageUrl ?? fallbackIconSrc);
+      : (fallbackImageUrl ?? fallbackIconSrc);
+  const backgroundSrc =
+    state.status === "ok" &&
+    state.data?.backgroundUrl &&
+    canUseRemoteImages
+      ? state.data.backgroundUrl
+      : (backgroundImageUrl ?? coverSrc);
 
   const title =
     state.status === "ok" && state.data?.name ? state.data.name : app.name;
@@ -126,9 +135,9 @@ export function IgdbPs5HeroBackdrop({
 
   return (
     <>
-      {coverSrc ? (
+      {backgroundSrc ? (
         <Image
-          src={coverSrc}
+          src={backgroundSrc}
           x={0}
           y={imgY}
           width={screen.width}

@@ -9,6 +9,7 @@ export type IgdbGameDetails = {
   summary: string | null;
   firstReleaseDate: number | null;
   coverUrl: string | null;
+  backgroundUrl: string | null;
   trailers: IgdbTrailer[];
 };
 

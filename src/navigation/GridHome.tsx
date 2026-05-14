@@ -205,10 +205,8 @@ export function GridHome() {
   const igdbInlineActive =
     settings.igdbInlineGridDetails && inlineIgdbOpen && selectedApp !== null;
 
-  const { fetchState, heroImageUrl } = useIgdbInlineExperience(
-    selectedApp,
-    igdbInlineActive,
-  );
+  const { fetchState, backgroundImageUrl, fallbackImageUrl } =
+    useIgdbInlineExperience(selectedApp, igdbInlineActive);
 
   useEffect(() => {
     if (!igdbInlineActive) {
@@ -344,7 +342,8 @@ export function GridHome() {
       {igdbInlineActive && selectedApp && (
         <IgdbPs5HeroBackdrop
           panT={heroPanT}
-          imageUrl={heroImageUrl}
+          backgroundImageUrl={backgroundImageUrl}
+          fallbackImageUrl={fallbackImageUrl}
           app={selectedApp}
           fetchState={fetchState}
         />
