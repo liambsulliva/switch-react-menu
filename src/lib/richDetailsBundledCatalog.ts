@@ -420,7 +420,7 @@ export function initializeRichDetailsForInstalledApps(
         findBundledRichMatch(games, exactByTitle, app.name),
       );
       if (i % 6 === 5 || i === n - 1) {
-        report(0.82 + 0.18 * ((i + 1) / Math.max(1, n)));
+        report(0.82 + 0.1 * ((i + 1) / Math.max(1, n)));
         await yieldToHost();
       }
     }

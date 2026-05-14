@@ -25,29 +25,46 @@ export function App() {
   const hardReloadNonce = useRichDetailsHardReloadNonce();
   const [richCatalogReady, setRichCatalogReady] = useState(false);
   const [richCatalogLoadProgress, setRichCatalogLoadProgress] = useState(0);
-  const pendingProgressRef = useRef(0);
-  const progressRafRef = useRef(0);
+  const targetProgressRef = useRef(0);
+  const displayProgressRef = useRef(0);
+  const lastTargetMsRef = useRef(
+    typeof performance !== "undefined" ? performance.now() : Date.now(),
+  );
+  const lastPaintedProgressRef = useRef(0);
   const prevHardReloadNonce = useRef<number | null>(null);
   const bootstrapGen = useRef(0);
 
-  const flushProgress = useCallback(() => {
-    progressRafRef.current = 0;
-    setRichCatalogLoadProgress(pendingProgressRef.current);
+  const resetProgressRefs = useCallback(() => {
+    const now =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    targetProgressRef.current = 0;
+    displayProgressRef.current = 0;
+    lastPaintedProgressRef.current = 0;
+    lastTargetMsRef.current = now;
   }, []);
 
-  const scheduleProgress = useCallback(
-    (p: number) => {
-      pendingProgressRef.current = p;
-      if (progressRafRef.current !== 0) return;
-      progressRafRef.current = requestAnimationFrame(flushProgress);
-    },
-    [flushProgress],
-  );
+  const scheduleProgress = useCallback((p: number) => {
+    const clamped = Math.max(0, Math.min(1, p));
+    if (clamped !== targetProgressRef.current) {
+      targetProgressRef.current = clamped;
+      lastTargetMsRef.current =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+    }
+  }, []);
+
+  const finishBootstrapProgress = useCallback(() => {
+    targetProgressRef.current = 1;
+    displayProgressRef.current = 1;
+    lastPaintedProgressRef.current = 1;
+    setRichCatalogLoadProgress(1);
+    setRichCatalogReady(true);
+  }, []);
 
   useLayoutEffect(() => {
+    resetProgressRefs();
     setRichCatalogReady(false);
     setRichCatalogLoadProgress(0);
-  }, [settings.disableRichDetails]);
+  }, [resetProgressRefs, settings.disableRichDetails]);
 
   useLayoutEffect(() => {
     if (
@@ -55,14 +72,60 @@ export function App() {
       prevHardReloadNonce.current !== null &&
       hardReloadNonce > prevHardReloadNonce.current
     ) {
+      resetProgressRefs();
       setRichCatalogReady(false);
       setRichCatalogLoadProgress(0);
     }
     prevHardReloadNonce.current = hardReloadNonce;
-  }, [hardReloadNonce, settings.disableRichDetails]);
+  }, [hardReloadNonce, resetProgressRefs, settings.disableRichDetails]);
+
+  useEffect(() => {
+    if (richCatalogReady) return undefined;
+    let raf = 0;
+    const nowMs = () =>
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    const tick = () => {
+      const target = targetProgressRef.current;
+      let d = displayProgressRef.current;
+      const t = nowMs();
+      const staleMs = t - lastTargetMsRef.current;
+
+      const gap = target - d;
+      const k = gap > 0.22 ? 0.42 : gap > 0.08 ? 0.22 : 0.11;
+      d += gap * k;
+
+      if (target < 0.998 && staleMs > 380) {
+        const creepCap = Math.min(0.87, target + 0.34);
+        d = Math.min(d + 0.0028, creepCap);
+      }
+
+      if (target >= 0.998) {
+        d += (1 - d) * 0.35;
+        if (1 - d < 0.002) d = 1;
+      }
+
+      d = Math.max(0, Math.min(1, d));
+      displayProgressRef.current = d;
+
+      const lastP = lastPaintedProgressRef.current;
+      if (Math.abs(d - lastP) >= 0.0035 || (d >= 0.99 && lastP < 0.99)) {
+        lastPaintedProgressRef.current = d;
+        setRichCatalogLoadProgress(d);
+      }
+
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [richCatalogReady]);
 
   useEffect(() => {
     const gen = ++bootstrapGen.current;
+    resetProgressRefs();
     let alive = true;
     const installedApps = Array.from(Switch.Application).filter(
       (app) => app.icon,
@@ -78,12 +141,12 @@ export function App() {
               installedSignature: sig,
             });
             if (!alive || bootstrapGen.current !== gen) return;
-            setRichCatalogLoadProgress(1);
-            setRichCatalogReady(true);
+            finishBootstrapProgress();
             return;
           }
 
           if (hardReloadNonce === 0) {
+            scheduleProgress(0.045);
             const payload = await loadRichPersistentPayload(sig);
             if (!alive || bootstrapGen.current !== gen) return;
             if (payload) {
@@ -93,13 +156,13 @@ export function App() {
                 installedSignature: sig,
               });
               if (!alive || bootstrapGen.current !== gen) return;
-              setRichCatalogLoadProgress(1);
-              setRichCatalogReady(true);
+              finishBootstrapProgress();
               return;
             }
           }
 
           if (!alive || bootstrapGen.current !== gen) return;
+          resetProgressRefs();
           setRichCatalogReady(false);
           setRichCatalogLoadProgress(0);
 
@@ -114,12 +177,10 @@ export function App() {
           if (!alive || bootstrapGen.current !== gen) return;
 
           bumpInstalledTitlesRevision();
-          setRichCatalogLoadProgress(1);
-          setRichCatalogReady(true);
+          finishBootstrapProgress();
         } catch {
           if (!alive || bootstrapGen.current !== gen) return;
-          setRichCatalogLoadProgress(1);
-          setRichCatalogReady(true);
+          finishBootstrapProgress();
         }
       });
     });
@@ -127,12 +188,14 @@ export function App() {
     return () => {
       alive = false;
       cancelAnimationFrame(frame);
-      if (progressRafRef.current !== 0) {
-        cancelAnimationFrame(progressRafRef.current);
-        progressRafRef.current = 0;
-      }
     };
-  }, [settings.disableRichDetails, hardReloadNonce, scheduleProgress]);
+  }, [
+    finishBootstrapProgress,
+    hardReloadNonce,
+    resetProgressRefs,
+    scheduleProgress,
+    settings.disableRichDetails,
+  ]);
 
   if (!richCatalogReady) {
     return <RichCatalogLoadingOverlay progress={richCatalogLoadProgress} />;
