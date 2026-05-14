@@ -39,6 +39,11 @@ import {
 } from "../lib/richDetailsBundledCatalog";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
+import {
+  DigitalClock,
+  TOP_RIGHT_CLOCK_PUSH_PX,
+  TOP_RIGHT_CLOCK_SCREEN_INSET_PX,
+} from "../components/Clock";
 import { HeroSplash } from "../components/HeroSplash";
 import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
 import { easeOutDetailEntrance } from "../lib/easing";
@@ -95,12 +100,7 @@ export function GridHome() {
   );
 
   const sortedApps = useMemo(
-    () =>
-      sortApplicationsForMode(
-        rawApps,
-        settings.sortingMode,
-        customOrder,
-      ),
+    () => sortApplicationsForMode(rawApps, settings.sortingMode, customOrder),
     [
       rawApps,
       settings.sortingMode,
@@ -381,7 +381,7 @@ export function GridHome() {
     );
   }
 
-  const settingsBtnCenterX = screen.width - 62;
+  const settingsBtnCenterX = screen.width - 62 - TOP_RIGHT_CLOCK_PUSH_PX;
   const settingsBtnCenterY = 50;
   const settingsBtnW = 80;
   const settingsBtnH = 58;
@@ -415,6 +415,12 @@ export function GridHome() {
         fill={COLORS.background}
       />
 
+      <DigitalClock
+        x={screen.width - GRID_SIDE_MARGIN - TOP_RIGHT_CLOCK_SCREEN_INSET_PX}
+        y={settingsBtnCenterY}
+        fontSize={26}
+      />
+
       {heroSplashInlineActive && selectedApp && (
         <HeroSplash
           panT={heroPanT}
@@ -437,17 +443,19 @@ export function GridHome() {
         />
       )}
 
-      {!heroSplashInlineActive && globeIconDefaultSrc && globeIconFocusedSrc && (
-        <Image
-          src={
-            focusArea === "globe" ? globeIconFocusedSrc : globeIconDefaultSrc
-          }
-          x={globeIconX}
-          y={globeIconY}
-          width={globeIconSize}
-          height={globeIconSize}
-        />
-      )}
+      {!heroSplashInlineActive &&
+        globeIconDefaultSrc &&
+        globeIconFocusedSrc && (
+          <Image
+            src={
+              focusArea === "globe" ? globeIconFocusedSrc : globeIconDefaultSrc
+            }
+            x={globeIconX}
+            y={globeIconY}
+            width={globeIconSize}
+            height={globeIconSize}
+          />
+        )}
       {!heroSplashInlineActive && (
         <Rect
           x={globeIconX + globeIconSize / 2 - globeIconHitW / 2}
@@ -459,17 +467,19 @@ export function GridHome() {
         />
       )}
 
-      {!heroSplashInlineActive && albumIconDefaultSrc && albumIconFocusedSrc && (
-        <Image
-          src={
-            focusArea === "album" ? albumIconFocusedSrc : albumIconDefaultSrc
-          }
-          x={albumIconX}
-          y={albumIconY}
-          width={albumIconSize}
-          height={albumIconSize}
-        />
-      )}
+      {!heroSplashInlineActive &&
+        albumIconDefaultSrc &&
+        albumIconFocusedSrc && (
+          <Image
+            src={
+              focusArea === "album" ? albumIconFocusedSrc : albumIconDefaultSrc
+            }
+            x={albumIconX}
+            y={albumIconY}
+            width={albumIconSize}
+            height={albumIconSize}
+          />
+        )}
       {!heroSplashInlineActive && (
         <Rect
           x={albumIconX + albumIconSize / 2 - albumIconHitW / 2}
@@ -481,19 +491,21 @@ export function GridHome() {
         />
       )}
 
-      {!heroSplashInlineActive && settingsCogDefaultSrc && settingsCogFocusedSrc && (
-        <Image
-          src={
-            focusArea === "settings"
-              ? settingsCogFocusedSrc
-              : settingsCogDefaultSrc
-          }
-          x={settingsCogLeft}
-          y={settingsBtnCenterY - settingsCogSize / 2}
-          width={settingsCogSize}
-          height={settingsCogSize}
-        />
-      )}
+      {!heroSplashInlineActive &&
+        settingsCogDefaultSrc &&
+        settingsCogFocusedSrc && (
+          <Image
+            src={
+              focusArea === "settings"
+                ? settingsCogFocusedSrc
+                : settingsCogDefaultSrc
+            }
+            x={settingsCogLeft}
+            y={settingsBtnCenterY - settingsCogSize / 2}
+            width={settingsCogSize}
+            height={settingsCogSize}
+          />
+        )}
       {!heroSplashInlineActive && (
         <Rect
           x={settingsBtnCenterX - settingsBtnW / 2}

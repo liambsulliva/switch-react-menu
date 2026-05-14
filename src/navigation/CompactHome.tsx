@@ -415,9 +415,7 @@ export function CompactHome() {
       rightActionActive={focusArea === "settings"}
       onRightActionTouchStart={() => setShowSettings(true)}
       footerHint={
-        settings.disableRichDetails
-          ? "A  Launch      −  Details"
-          : "A  Launch"
+        settings.disableRichDetails ? "A  Launch      −  Details" : "A  Launch"
       }
     >
       <List
