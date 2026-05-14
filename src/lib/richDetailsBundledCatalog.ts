@@ -396,3 +396,9 @@ export async function getInstalledRichMatch(
   }
   return installedMatchesByAppId.get(app.id.toString()) ?? null;
 }
+
+export function peekInstalledRichMatch(
+  applicationId: string,
+): RichGameDetails | null {
+  return installedMatchesByAppId.get(applicationId) ?? null;
+}

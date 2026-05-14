@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Image, Rect } from "react-tela";
 import { truncate } from "../lib/truncate";
 import { AppIcon } from "../components/AppIcon";
@@ -19,11 +25,17 @@ import {
   type GridHomeFocusArea,
 } from "../hooks/useGamepadNavigation";
 import {
-  recordLastPlayed,
+  registerAppLaunch,
   useLastPlayedApplicationId,
 } from "../settings/lastPlayedStore";
 import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
+import { useLaunchCountsRevision } from "../settings/launchCountsStore";
+import { sortApplicationsForMode } from "../lib/sortApplications";
+import {
+  getInstalledTitlesRevision,
+  subscribeInstalledTitlesRevision,
+} from "../lib/richDetailsBundledCatalog";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
 import { HeroSplash } from "../components/HeroSplash";
@@ -47,6 +59,12 @@ function openSwitchWebApplet(url: string = GRID_HOME_WEB_APPLET_URL) {
 export function GridHome() {
   const settings = useSettings();
   const customOrder = useCustomOrder();
+  const installedTitlesRevision = useSyncExternalStore(
+    subscribeInstalledTitlesRevision,
+    getInstalledTitlesRevision,
+    getInstalledTitlesRevision,
+  );
+  const launchCountsRevision = useLaunchCountsRevision();
   const hiddenGameIds = useHiddenGameIdSet();
   const lastPlayedId = useLastPlayedApplicationId();
   const [rawApps, setRawApps] = useState<Switch.Application[]>([]);
@@ -79,24 +97,21 @@ export function GridHome() {
     null,
   );
 
-  const sortedApps = useMemo(() => {
-    if (settings.alphabeticalSort) {
-      return [...rawApps].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, {
-          sensitivity: "base",
-        }),
-      );
-    }
-    if (customOrder.length > 0) {
-      const orderMap = new Map(customOrder.map((id, i) => [id, i]));
-      return [...rawApps].sort((a, b) => {
-        const ai = orderMap.get(a.id.toString()) ?? Infinity;
-        const bi = orderMap.get(b.id.toString()) ?? Infinity;
-        return ai - bi;
-      });
-    }
-    return rawApps;
-  }, [rawApps, settings.alphabeticalSort, customOrder]);
+  const sortedApps = useMemo(
+    () =>
+      sortApplicationsForMode(
+        rawApps,
+        settings.sortingMode,
+        customOrder,
+      ),
+    [
+      rawApps,
+      settings.sortingMode,
+      customOrder,
+      installedTitlesRevision,
+      launchCountsRevision,
+    ],
+  );
 
   const apps = useMemo(
     () => sortedApps.filter((a) => !hiddenGameIds.has(a.id.toString())),
@@ -167,7 +182,7 @@ export function GridHome() {
   }, []);
 
   useEffect(() => {
-    if (!settings.alphabeticalSort) return;
+    if (settings.sortingMode !== "alphabetical") return;
     const alphabeticalOrder = [...rawApps]
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, {
@@ -176,7 +191,7 @@ export function GridHome() {
       )
       .map((app) => app.id.toString());
     setCustomOrder(alphabeticalOrder);
-  }, [settings.alphabeticalSort, rawApps]);
+  }, [settings.sortingMode, rawApps]);
 
   useEffect(() => {
     if (appCount === 0) {
@@ -273,7 +288,7 @@ export function GridHome() {
     const picked = apps[index];
     if (!picked) return;
     if (index === selectedIndex) {
-      recordLastPlayed(picked);
+      registerAppLaunch(picked);
       picked.launch();
     } else {
       setSelectedIndex(index);
@@ -301,7 +316,7 @@ export function GridHome() {
       <SettingsMenu
         onClose={() => setShowSettings(false)}
         onCustomSort={() => {
-          setSettings({ alphabeticalSort: false });
+          setSettings({ sortingMode: "custom" });
           setShowSettings(false);
           setShowCustomSort(true);
         }}

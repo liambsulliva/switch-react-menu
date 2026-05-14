@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { Text } from "react-tela";
 import { Button } from "@nx.js/constants";
@@ -17,11 +18,17 @@ import { Modal } from "../components/Modal";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import type { ListElementModel } from "../components/ListElement";
 import {
-  recordLastPlayed,
+  registerAppLaunch,
   useLastPlayedApplicationId,
 } from "../settings/lastPlayedStore";
 import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
+import { useLaunchCountsRevision } from "../settings/launchCountsStore";
+import { sortApplicationsForMode } from "../lib/sortApplications";
+import {
+  getInstalledTitlesRevision,
+  subscribeInstalledTitlesRevision,
+} from "../lib/richDetailsBundledCatalog";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
 
@@ -72,6 +79,12 @@ function ensureVisible(index: number, offset: number): number {
 export function CompactHome() {
   const settings = useSettings();
   const customOrder = useCustomOrder();
+  const installedTitlesRevision = useSyncExternalStore(
+    subscribeInstalledTitlesRevision,
+    getInstalledTitlesRevision,
+    getInstalledTitlesRevision,
+  );
+  const launchCountsRevision = useLaunchCountsRevision();
   const hiddenGameIds = useHiddenGameIdSet();
   const lastPlayedId = useLastPlayedApplicationId();
   const [apps, setApps] = useState<Switch.Application[]>([]);
@@ -113,31 +126,25 @@ export function CompactHome() {
   }, [settings.disableRichDetails]);
 
   useEffect(() => {
-    if (!settings.alphabeticalSort) return;
+    if (settings.sortingMode !== "alphabetical") return;
     const alphabeticalOrder = [...apps]
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
       )
       .map((app) => app.id.toString());
     setCustomOrder(alphabeticalOrder);
-  }, [settings.alphabeticalSort, apps]);
+  }, [settings.sortingMode, apps]);
 
-  const sortedApps = useMemo(() => {
-    if (settings.alphabeticalSort) {
-      return [...apps].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-      );
-    }
-    if (customOrder.length > 0) {
-      const orderMap = new Map(customOrder.map((id, i) => [id, i]));
-      return [...apps].sort((a, b) => {
-        const ai = orderMap.get(a.id.toString()) ?? Infinity;
-        const bi = orderMap.get(b.id.toString()) ?? Infinity;
-        return ai - bi;
-      });
-    }
-    return apps;
-  }, [apps, settings.alphabeticalSort, customOrder]);
+  const sortedApps = useMemo(
+    () => sortApplicationsForMode(apps, settings.sortingMode, customOrder),
+    [
+      apps,
+      settings.sortingMode,
+      customOrder,
+      installedTitlesRevision,
+      launchCountsRevision,
+    ],
+  );
 
   const visibleSortedApps = useMemo(
     () => sortedApps.filter((app) => !hiddenGameIds.has(app.id.toString())),
@@ -214,7 +221,7 @@ export function CompactHome() {
     const launchSelected = () => {
       const app = visibleSortedApps[selectedIndex];
       if (!app) return;
-      recordLastPlayed(app);
+      registerAppLaunch(app);
       app.launch();
     };
 
@@ -378,7 +385,7 @@ export function CompactHome() {
       <SettingsMenu
         onClose={() => setShowSettings(false)}
         onCustomSort={() => {
-          setSettings({ alphabeticalSort: false });
+          setSettings({ sortingMode: "custom" });
           setShowSettings(false);
           setShowCustomSort(true);
         }}
@@ -432,7 +439,7 @@ export function CompactHome() {
             setScrollOffset((off) => ensureVisible(absoluteIndex, off));
             return;
           }
-          recordLastPlayed(app);
+          registerAppLaunch(app);
           app.launch();
         }}
       />

@@ -7,9 +7,14 @@ import React, {
 } from "react";
 import { Button } from "@nx.js/constants";
 import {
+  getSettings,
+  nextSortingMode,
+  setSettings,
+  sortingModeLabel,
   toggleSetting,
   useSettings,
   type AppSettings,
+  type BooleanAppSettingKey,
 } from "../settings/settingsStore";
 import { List } from "../components/List";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
@@ -55,8 +60,9 @@ type SettingsActionHandlers = {
 type SettingRowConfig = {
   id: string;
   label: string;
-  variant: "knob" | "action";
-  key?: keyof AppSettings;
+  variant: "knob" | "action" | "caption";
+  key?: BooleanAppSettingKey;
+  caption?: (settings: AppSettings) => string;
   isDisabled?: (settings: AppSettings) => boolean;
   onSelect?: (handlers: SettingsActionHandlers) => void;
 };
@@ -83,10 +89,16 @@ const SETTING_ROWS: SettingRowConfig[] = [
     isDisabled: (s) => !s.disableRichDetails,
   },
   {
-    id: "alphabeticalSort",
-    key: "alphabeticalSort",
-    label: "Alphabetical Sort",
-    variant: "knob",
+    id: "sortingMode",
+    label: "Sorting Mode",
+    variant: "caption",
+    caption: (s) => sortingModeLabel(s.sortingMode),
+    onSelect: (_handlers) => {
+      const s = getSettings();
+      setSettings({
+        sortingMode: nextSortingMode(s.sortingMode, !s.disableRichDetails),
+      });
+    },
   },
   {
     id: "compactView",
@@ -112,7 +124,7 @@ const SETTING_ROWS: SettingRowConfig[] = [
     id: "custom-sort",
     label: "Custom Sort",
     variant: "action",
-    isDisabled: (currentSettings) => currentSettings.alphabeticalSort,
+    isDisabled: (currentSettings) => currentSettings.sortingMode !== "custom",
     onSelect: ({ onCustomSort }) => onCustomSort?.(),
   },
   {
@@ -142,7 +154,8 @@ export function SettingsMenu({
         id: row.id,
         label: row.label,
         variant: row.variant,
-        knobValue: row.key ? settings[row.key] : undefined,
+        knobValue: row.key ? Boolean(settings[row.key]) : undefined,
+        caption: row.caption?.(settings),
         disabled: row.isDisabled?.(settings) ?? false,
         onSelect: () => {
           if (row.key) {

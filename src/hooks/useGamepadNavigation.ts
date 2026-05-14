@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
-import { recordLastPlayed } from "../settings/lastPlayedStore";
+import { registerAppLaunch } from "../settings/lastPlayedStore";
 
 export type GridHomeFocusArea =
   | "apps"
@@ -10,9 +10,7 @@ export type GridHomeFocusArea =
   | "globe";
 
 interface GamepadNavigationProps {
-  /** Full app list (same order as the horizontal row). */
   apps: Switch.Application[];
-  /** Move selection by this many slots on L/R shoulder. */
   jumpStep: number;
   onStepPrev: () => void;
   onStepNext: () => void;
@@ -330,7 +328,7 @@ export function useGamepadNavigation({
         if (focusArea === "apps") {
           const app = apps[selectedIndex];
           if (app) {
-            recordLastPlayed(app);
+            registerAppLaunch(app);
             app.launch();
           }
         } else if (focusArea === "navigation") {

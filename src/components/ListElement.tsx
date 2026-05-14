@@ -1,8 +1,9 @@
 import React from "react";
 import { Image, Rect, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
+import { truncate } from "../lib/truncate";
 
-export type ListElementVariant = "knob" | "dropdown" | "action" | "game";
+export type ListElementVariant = "knob" | "dropdown" | "action" | "game" | "caption";
 
 export interface ListElementModel {
   id: string;
@@ -11,6 +12,7 @@ export interface ListElementModel {
   disabled?: boolean;
   onSelect?: () => void;
   knobValue?: boolean;
+  caption?: string;
   gameIconSrc?: string;
   gameVersion?: string;
   gameEyebrow?: string;
@@ -46,6 +48,7 @@ export function ListElement({
   isSelected,
   disabled = false,
   knobValue = false,
+  caption,
   gameIconSrc,
   gameVersion,
   gameEyebrow,
@@ -169,6 +172,24 @@ export function ListElement({
           textBaseline="middle"
         >
           Edit
+        </Text>
+      )}
+
+      {variant === "caption" && caption && (
+        <Text
+          x={x + width - 24}
+          y={y + height / 2}
+          fill={valueColor}
+          fontSize={22}
+          fontFamily={
+            isSelected && !disabled
+              ? "SourceSansPro-Bold"
+              : "SourceSansPro-Regular"
+          }
+          textAlign="right"
+          textBaseline="middle"
+        >
+          {truncate(caption, 26)}
         </Text>
       )}
 
