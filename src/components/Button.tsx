@@ -10,6 +10,9 @@ export type ButtonProps = {
   label: string;
   onPress: () => void;
   isHighlighted?: boolean;
+  fill?: string;
+  labelFill?: string;
+  ringStroke?: string;
 };
 
 export function Button({
@@ -20,7 +23,14 @@ export function Button({
   label,
   onPress,
   isHighlighted = false,
+  fill,
+  labelFill,
+  ringStroke,
 }: ButtonProps) {
+  const bg =
+    fill ?? (isHighlighted ? COLORS.rowSelectedBg : COLORS.gray[600]);
+  const textFill = labelFill ?? COLORS.gray[0];
+  const ring = ringStroke ?? COLORS.gray[0];
   return (
     <>
       {isHighlighted && (
@@ -30,7 +40,7 @@ export function Button({
           width={width + 8}
           height={height + 8}
           fill="none"
-          stroke={COLORS.gray[0]}
+          stroke={ring}
           lineWidth={4}
         />
       )}
@@ -39,12 +49,12 @@ export function Button({
         y={y}
         width={width}
         height={height}
-        fill={isHighlighted ? COLORS.rowSelectedBg : COLORS.gray[600]}
+        fill={bg}
       />
       <Text
         x={x + 14}
         y={y + height / 2}
-        fill={COLORS.gray[0]}
+        fill={textFill}
         fontSize={17}
         fontFamily="SourceSansPro-Regular"
         textAlign="left"

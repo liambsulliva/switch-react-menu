@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Rect, Text } from "react-tela";
 import {
   Badge,
@@ -13,16 +13,23 @@ import type { HeroSplashInlineSubFocus } from "../hooks/useGamepadNavigation";
 import { formatRichReleaseDate, type RichTrailer } from "../lib/richGameDetails";
 import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
 import { openSwitchWebApplet } from "../lib/switchWebApplet";
-import { canFetchRemoteRichAssets } from "../lib/remoteRichAssets";
+import {
+  getTwoProminentColorsFromIconBytes,
+  renderHeroGradientObjectUrl,
+  type Rgb,
+} from "../lib/iconHeroGradientPalette";
 
-const iconUrlCache = new Map<string, string>();
+const heroSplashIconUrlCache = new Map<string, string>();
 
-function getIconObjectUrl(app: { id: bigint }, icon: ArrayBuffer): string {
+function getHeroSplashIconObjectUrl(
+  app: { id: bigint },
+  icon: ArrayBuffer,
+): string {
   const key = app.id.toString();
-  let url = iconUrlCache.get(key);
+  let url = heroSplashIconUrlCache.get(key);
   if (!url) {
     url = URL.createObjectURL(new Blob([icon]));
-    iconUrlCache.set(key, url);
+    heroSplashIconUrlCache.set(key, url);
   }
   return url;
 }
@@ -67,8 +74,6 @@ function wrapSummary(
 
 export type HeroSplashProps = {
   panT: number;
-  backgroundImageUrl: string | null;
-  fallbackImageUrl: string | null;
   app: Switch.Application;
   fetchState: HeroSplashInlineFetchState;
   /** When `"trailers"`, the trailer row shows a gamepad selection ring. */
@@ -81,8 +86,6 @@ const IMAGE_EXTRA = 1.55;
 
 export function HeroSplash({
   panT,
-  backgroundImageUrl,
-  fallbackImageUrl,
   app,
   fetchState,
   heroInlineSubFocus = "content",
@@ -98,20 +101,77 @@ export function HeroSplash({
   const imgY = heroTop + HERO_H - imgH;
 
   const state = fetchState;
-  const fallbackIconSrc = useMemo(
-    () => (app.icon ? getIconObjectUrl(app, app.icon) : null),
+
+  const squareIconSrc = useMemo(
+    () => (app.icon ? getHeroSplashIconObjectUrl(app, app.icon) : null),
     [app],
   );
 
-  const canUseRemoteImages = canFetchRemoteRichAssets();
-  const coverSrc =
-    state.status === "ok" && state.data?.coverUrl && canUseRemoteImages
-      ? state.data.coverUrl
-      : (fallbackImageUrl ?? fallbackIconSrc);
-  const backgroundSrc =
-    state.status === "ok" && state.data?.backgroundUrl && canUseRemoteImages
-      ? state.data.backgroundUrl
-      : (backgroundImageUrl ?? coverSrc);
+  const useIconBackdropGradient = app.icon != null;
+
+  const [iconBackdropPair, setIconBackdropPair] = useState<{
+    a: Rgb;
+    b: Rgb;
+  } | null>(null);
+  const [heroGradientUrl, setHeroGradientUrl] = useState<string | null>(null);
+  const heroGradientUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!useIconBackdropGradient || !app.icon) {
+      setIconBackdropPair(null);
+      return;
+    }
+    let cancelled = false;
+    void getTwoProminentColorsFromIconBytes(app.icon, app.id).then((pair) => {
+      if (!cancelled) setIconBackdropPair(pair);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [useIconBackdropGradient, app.icon, app.id]);
+
+  useEffect(() => {
+    if (!useIconBackdropGradient || !iconBackdropPair) {
+      if (heroGradientUrlRef.current) {
+        URL.revokeObjectURL(heroGradientUrlRef.current);
+        heroGradientUrlRef.current = null;
+      }
+      setHeroGradientUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    const gw = Math.min(screen.width, 720);
+    const gh = Math.min(imgH, 720);
+
+    void renderHeroGradientObjectUrl({
+      width: gw,
+      height: gh,
+      a: iconBackdropPair.a,
+      b: iconBackdropPair.b,
+    })
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        if (heroGradientUrlRef.current) {
+          URL.revokeObjectURL(heroGradientUrlRef.current);
+        }
+        heroGradientUrlRef.current = url;
+        setHeroGradientUrl(url);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+      if (heroGradientUrlRef.current) {
+        URL.revokeObjectURL(heroGradientUrlRef.current);
+        heroGradientUrlRef.current = null;
+      }
+      setHeroGradientUrl(null);
+    };
+  }, [useIconBackdropGradient, iconBackdropPair, imgH]);
 
   const title =
     state.status === "ok" && state.data?.name ? state.data.name : app.name;
@@ -121,9 +181,9 @@ export function HeroSplash({
       : null;
 
   const padding = 18;
-  const coverW = 96;
-  const coverH = 128;
-  const textX = padding + coverW + 16;
+  /** Square tile matching grid `AppIcon` aspect (not portrait cover art). */
+  const iconTile = 96;
+  const textX = padding + iconTile + 16;
   const textW = screen.width - textX - padding;
   const charsPerLine = Math.max(20, Math.floor(textW / 10));
 
@@ -269,9 +329,9 @@ export function HeroSplash({
 
   return (
     <>
-      {backgroundSrc ? (
+      {heroGradientUrl ? (
         <Image
-          src={backgroundSrc}
+          src={heroGradientUrl}
           x={0}
           y={imgY}
           width={screen.width}
@@ -287,42 +347,20 @@ export function HeroSplash({
         />
       )}
 
-      <Rect
-        x={0}
-        y={heroTop}
-        width={screen.width}
-        height={HERO_H}
-        fill="rgba(6,6,10,0.5)"
-      />
-      <Rect
-        x={0}
-        y={heroTop + Math.floor(HERO_H * 0.25)}
-        width={screen.width}
-        height={HERO_H - Math.floor(HERO_H * 0.25)}
-        fill="rgba(6,6,10,0.62)"
-      />
-      <Rect
-        x={0}
-        y={heroTop + HERO_H - 2}
-        width={screen.width}
-        height={2}
-        fill="rgba(255,255,255,0.07)"
-      />
-
-      {coverSrc ? (
+      {squareIconSrc ? (
         <Image
-          src={coverSrc}
+          src={squareIconSrc}
           x={padding}
           y={heroTop + padding}
-          width={coverW}
-          height={coverH}
+          width={iconTile}
+          height={iconTile}
         />
       ) : (
         <Rect
           x={padding}
           y={heroTop + padding}
-          width={coverW}
-          height={coverH}
+          width={iconTile}
+          height={iconTile}
           fill={COLORS.gray[700]}
         />
       )}
@@ -354,7 +392,7 @@ export function HeroSplash({
         <Text
           x={textX}
           y={yLine2}
-          fill={COLORS.gray[400]}
+          fill={COLORS.gray[200]}
           fontSize={19}
           fontFamily="SourceSansPro-Regular"
           textAlign="left"
@@ -368,7 +406,7 @@ export function HeroSplash({
         <Text
           x={textX}
           y={yLine2}
-          fill={COLORS.gray[400]}
+          fill={COLORS.gray[200]}
           fontSize={17}
           fontFamily="SourceSansPro-Regular"
           textAlign="left"
@@ -382,7 +420,7 @@ export function HeroSplash({
         <Text
           x={textX}
           y={yLine2}
-          fill={COLORS.gray[500]}
+          fill={COLORS.gray[200]}
           fontSize={17}
           fontFamily="SourceSansPro-Regular"
           textAlign="left"
@@ -397,7 +435,7 @@ export function HeroSplash({
           <Text
             x={textX}
             y={yLine2}
-            fill={COLORS.gray[400]}
+            fill={COLORS.gray[200]}
             fontSize={17}
             fontFamily="SourceSansPro-Regular"
             textAlign="left"
@@ -410,7 +448,7 @@ export function HeroSplash({
               key={`sum-${i}`}
               x={textX}
               y={summaryStartY + i * 20}
-              fill={COLORS.gray[200]}
+              fill={COLORS.gray[0]}
               fontSize={17}
               fontFamily="SourceSansPro-Regular"
               textAlign="left"
@@ -423,7 +461,7 @@ export function HeroSplash({
             <Text
               x={textX}
               y={summaryStartY}
-              fill={COLORS.gray[500]}
+              fill={COLORS.gray[0]}
               fontSize={17}
               fontFamily="SourceSansPro-Regular"
               textAlign="left"

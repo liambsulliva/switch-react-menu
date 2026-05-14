@@ -242,8 +242,10 @@ export function GridHome() {
   const heroSplashInlineActive =
     heroSplashOnGridEnabled && heroSplashInlineOpen && selectedApp !== null;
 
-  const { fetchState, backgroundImageUrl, fallbackImageUrl } =
-    useHeroSplashInlineExperience(selectedApp, heroSplashInlineActive);
+  const { fetchState } = useHeroSplashInlineExperience(
+    selectedApp,
+    heroSplashInlineActive,
+  );
 
   const heroTrailerCount = useMemo(() => {
     if (!heroSplashInlineActive) return 0;
@@ -426,8 +428,6 @@ export function GridHome() {
       {heroSplashInlineActive && selectedApp && (
         <HeroSplash
           panT={heroPanT}
-          backgroundImageUrl={backgroundImageUrl}
-          fallbackImageUrl={fallbackImageUrl}
           app={selectedApp}
           fetchState={fetchState}
           heroInlineSubFocus={heroInlineSubFocus}
