@@ -75,6 +75,31 @@ const SETTING_ROWS: SettingRowConfig[] = [
     variant: "knob",
   },
   {
+    id: "sortingMode",
+    label: "Sorting Mode",
+    variant: "caption",
+    caption: (s) => sortingModeLabel(s.sortingMode),
+    onSelect: (_handlers) => {
+      const s = getSettings();
+      setSettings({
+        sortingMode: nextSortingMode(s.sortingMode, !s.disableRichDetails),
+      });
+    },
+  },
+  {
+    id: "custom-sort",
+    label: "Custom Sort",
+    variant: "action",
+    isDisabled: (currentSettings) => currentSettings.sortingMode !== "custom",
+    onSelect: ({ onCustomSort }) => onCustomSort?.(),
+  },
+  {
+    id: "showLastPlayed",
+    key: "showLastPlayed",
+    label: "Show Last Played",
+    variant: "knob",
+  },
+  {
     id: "showAppTitles",
     key: "showAppTitles",
     label: "Show App Titles",
@@ -89,18 +114,6 @@ const SETTING_ROWS: SettingRowConfig[] = [
     isDisabled: (s) => !s.disableRichDetails,
   },
   {
-    id: "sortingMode",
-    label: "Sorting Mode",
-    variant: "caption",
-    caption: (s) => sortingModeLabel(s.sortingMode),
-    onSelect: (_handlers) => {
-      const s = getSettings();
-      setSettings({
-        sortingMode: nextSortingMode(s.sortingMode, !s.disableRichDetails),
-      });
-    },
-  },
-  {
     id: "compactView",
     key: "compactView",
     label: "Compact View",
@@ -108,24 +121,11 @@ const SETTING_ROWS: SettingRowConfig[] = [
     isDisabled: (s) => !s.disableRichDetails,
   },
   {
-    id: "showLastPlayed",
-    key: "showLastPlayed",
-    label: "Show Last Played",
-    variant: "knob",
-  },
-  {
     id: "screensaver",
     key: "screensaver",
     label: "Screensaver",
     isDisabled: () => true,
     variant: "knob",
-  },
-  {
-    id: "custom-sort",
-    label: "Custom Sort",
-    variant: "action",
-    isDisabled: (currentSettings) => currentSettings.sortingMode !== "custom",
-    onSelect: ({ onCustomSort }) => onCustomSort?.(),
   },
   {
     id: "refreshRichCatalog",
