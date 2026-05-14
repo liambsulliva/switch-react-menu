@@ -10,10 +10,13 @@ export type GridHomeFocusArea =
   | "globe";
 
 interface GamepadNavigationProps {
-  onPrevPage: () => void;
-  onNextPage: () => void;
+  /** Full app list (same order as the horizontal row). */
+  apps: Switch.Application[];
+  /** Move selection by this many slots on L/R shoulder. */
+  jumpStep: number;
+  onStepPrev: () => void;
+  onStepNext: () => void;
   setSelectedIndex: (cb: (prev: number) => number) => void;
-  paginatedApps: { app: Switch.Application }[];
   selectedIndex: number;
   focusArea: GridHomeFocusArea;
   setFocusArea: (cb: (prev: GridHomeFocusArea) => GridHomeFocusArea) => void;
@@ -24,6 +27,11 @@ interface GamepadNavigationProps {
   onOpenAlbum?: () => void;
   onOpenWebBrowser?: () => void;
   onMinus?: () => void;
+  /** Grid: hide bottom nav; ↓ on apps opens inline IGDB panel instead of focusing nav. */
+  replaceBottomNavWithIgdb?: boolean;
+  inlineDetailsOpen?: boolean;
+  onOpenInlineDetails?: () => void;
+  onCloseInlineDetails?: () => void;
 }
 
 interface GamepadState {
@@ -51,10 +59,11 @@ const HOLD_REPEAT_INITIAL_DELAY_MS = 250;
 const HOLD_REPEAT_INTERVAL_MS = 110;
 
 export function useGamepadNavigation({
-  onPrevPage,
-  onNextPage,
+  apps,
+  jumpStep,
+  onStepPrev,
+  onStepNext,
   setSelectedIndex,
-  paginatedApps,
   selectedIndex,
   focusArea,
   setFocusArea,
@@ -65,6 +74,10 @@ export function useGamepadNavigation({
   onOpenAlbum,
   onOpenWebBrowser,
   onMinus,
+  replaceBottomNavWithIgdb = false,
+  inlineDetailsOpen = false,
+  onOpenInlineDetails,
+  onCloseInlineDetails,
 }: GamepadNavigationProps) {
   const [gamepadState, setGamepadState] = useState<GamepadState>({
     shouldersPressed: { L: false, R: false },
@@ -89,20 +102,15 @@ export function useGamepadNavigation({
       return heldFor % HOLD_REPEAT_INTERVAL_MS < 16;
     };
 
+    const appCount = apps.length;
+
     const handleLeftPress = () => {
       if (focusArea === "settings") {
         setFocusArea(() => "album");
       } else if (focusArea === "album") {
         setFocusArea(() => "globe");
       } else if (focusArea === "apps") {
-        setSelectedIndex((prev) => {
-          const newIndex = prev - 1;
-          if (newIndex < 0) {
-            onPrevPage();
-            return paginatedApps.length - 1;
-          }
-          return newIndex;
-        });
+        onStepPrev();
       } else if (focusArea === "navigation") {
         setNavButtonIndex((prev) => (prev > 0 ? prev - 1 : 1));
       }
@@ -114,14 +122,7 @@ export function useGamepadNavigation({
       } else if (focusArea === "globe") {
         setFocusArea(() => "album");
       } else if (focusArea === "apps") {
-        setSelectedIndex((prev) => {
-          const newIndex = prev + 1;
-          if (newIndex >= paginatedApps.length) {
-            onNextPage();
-            return 0;
-          }
-          return newIndex;
-        });
+        onStepNext();
       } else if (focusArea === "navigation") {
         setNavButtonIndex((prev) => (prev < 1 ? prev + 1 : 0));
       }
@@ -177,7 +178,9 @@ export function useGamepadNavigation({
           ...prev,
           shouldersPressed: { ...prev.shouldersPressed, L: true },
         }));
-        onPrevPage();
+        if (focusArea === "apps" && appCount > 0) {
+          setSelectedIndex((prev) => Math.max(0, prev - jumpStep));
+        }
       } else if (
         !gamepad.buttons[Button.L].pressed &&
         gamepadState.shouldersPressed.L
@@ -196,7 +199,11 @@ export function useGamepadNavigation({
           ...prev,
           shouldersPressed: { ...prev.shouldersPressed, R: true },
         }));
-        onNextPage();
+        if (focusArea === "apps" && appCount > 0) {
+          setSelectedIndex((prev) =>
+            Math.min(appCount - 1, prev + jumpStep),
+          );
+        }
       } else if (
         !gamepad.buttons[Button.R].pressed &&
         gamepadState.shouldersPressed.R
@@ -271,11 +278,19 @@ export function useGamepadNavigation({
           ...prev,
           directionalPressed: { ...prev.directionalPressed, Up: true },
         }));
-        setFocusArea((prev) => {
-          if (prev === "navigation") return "apps";
-          if (prev === "apps") return "album";
-          return prev;
-        });
+        if (
+          replaceBottomNavWithIgdb &&
+          focusArea === "apps" &&
+          inlineDetailsOpen
+        ) {
+          onCloseInlineDetails?.();
+        } else {
+          setFocusArea((prev) => {
+            if (prev === "navigation") return "apps";
+            if (prev === "apps") return "album";
+            return prev;
+          });
+        }
       } else if (!isUpPressed && gamepadState.directionalPressed.Up) {
         setGamepadState((prev) => ({
           ...prev,
@@ -293,12 +308,16 @@ export function useGamepadNavigation({
           ...prev,
           directionalPressed: { ...prev.directionalPressed, Down: true },
         }));
-        setFocusArea((prev) => {
-          if (prev === "settings" || prev === "album" || prev === "globe")
-            return "apps";
-          if (prev === "apps") return "navigation";
-          return prev;
-        });
+        if (replaceBottomNavWithIgdb && focusArea === "apps") {
+          onOpenInlineDetails?.();
+        } else {
+          setFocusArea((prev) => {
+            if (prev === "settings" || prev === "album" || prev === "globe")
+              return "apps";
+            if (prev === "apps") return "navigation";
+            return prev;
+          });
+        }
       } else if (!isDownPressed && gamepadState.directionalPressed.Down) {
         setGamepadState((prev) => ({
           ...prev,
@@ -309,15 +328,17 @@ export function useGamepadNavigation({
       // Handle A button with press/release debounce
       if (gamepad.buttons[Button.A].pressed && !gamepadState.aPressed) {
         setGamepadState((prev) => ({ ...prev, aPressed: true }));
-        if (focusArea === "apps" && paginatedApps[selectedIndex]) {
-          const app = paginatedApps[selectedIndex].app;
-          recordLastPlayed(app);
-          app.launch();
+        if (focusArea === "apps") {
+          const app = apps[selectedIndex];
+          if (app) {
+            recordLastPlayed(app);
+            app.launch();
+          }
         } else if (focusArea === "navigation") {
           if (navButtonIndex === 0) {
-            onPrevPage();
+            onStepPrev();
           } else {
-            onNextPage();
+            onStepNext();
           }
         } else if (focusArea === "settings") {
           onOpenSettings?.();
@@ -340,10 +361,11 @@ export function useGamepadNavigation({
     };
   }, [
     gamepadState,
-    paginatedApps,
+    apps,
+    jumpStep,
     selectedIndex,
-    onPrevPage,
-    onNextPage,
+    onStepPrev,
+    onStepNext,
     setSelectedIndex,
     focusArea,
     setFocusArea,
@@ -354,5 +376,9 @@ export function useGamepadNavigation({
     onOpenAlbum,
     onOpenWebBrowser,
     onMinus,
+    replaceBottomNavWithIgdb,
+    inlineDetailsOpen,
+    onOpenInlineDetails,
+    onCloseInlineDetails,
   ]);
 }

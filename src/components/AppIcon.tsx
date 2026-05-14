@@ -1,10 +1,13 @@
 import React from "react";
 import { Image, Text, Rect } from "react-tela";
-import { AppData } from "../types/AppData";
 import { COLORS } from "../lib/colors";
 
 interface AppIconProps {
-  displayedApp: AppData;
+  app: Switch.Application;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   truncate: (str: string, maxLength: number) => string;
   isSelected?: boolean;
   onSelect: () => void;
@@ -25,21 +28,25 @@ function getIconUrl(app: { id: bigint }, icon: ArrayBuffer): string {
 }
 
 export function AppIcon({
-  displayedApp,
+  app,
+  x,
+  y,
+  width,
+  height,
   truncate,
   isSelected,
   onSelect,
   showTitle = true,
   showLastPlayedEyebrow = false,
 }: AppIconProps) {
-  const iconBottom = displayedApp.y + displayedApp.height;
+  const iconBottom = y + height;
 
   return (
     <>
       {showLastPlayedEyebrow && (
         <Text
-          x={displayedApp.x}
-          y={displayedApp.y - 6}
+          x={x}
+          y={y - 6}
           fill={COLORS.eyebrowLabel}
           fontSize={16}
           fontFamily="SourceSansPro-Bold"
@@ -49,32 +56,32 @@ export function AppIcon({
           Last Played!
         </Text>
       )}
-      {displayedApp.app.icon && (
+      {app.icon && (
         <>
           {isSelected && (
             <Rect
-              x={displayedApp.x - 5}
-              y={displayedApp.y - 5}
-              width={displayedApp.width + 10}
-              height={displayedApp.height + 10}
+              x={x - 5}
+              y={y - 5}
+              width={width + 10}
+              height={height + 10}
               fill="none"
               stroke={COLORS.gray[0]}
               lineWidth={5}
             />
           )}
           <Image
-            src={getIconUrl(displayedApp.app, displayedApp.app.icon)}
-            x={displayedApp.x}
-            y={displayedApp.y}
-            width={displayedApp.width}
-            height={displayedApp.height}
+            src={getIconUrl(app, app.icon)}
+            x={x}
+            y={y}
+            width={width}
+            height={height}
             onTouchStart={onSelect}
           />
         </>
       )}
       {showTitle && (
         <Text
-          x={displayedApp.x + displayedApp.width / 2}
+          x={x + width / 2}
           y={iconBottom + 20}
           fill={isSelected ? COLORS.gray[0] : COLORS.gray[200]}
           fontSize={24}
@@ -83,7 +90,7 @@ export function AppIcon({
           }
           textAlign="center"
         >
-          {truncate(displayedApp.app.name, 17)}
+          {truncate(app.name, 17)}
         </Text>
       )}
     </>

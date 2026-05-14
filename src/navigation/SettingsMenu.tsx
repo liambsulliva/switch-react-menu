@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@nx.js/constants";
 import {
   toggleSetting,
@@ -108,6 +114,12 @@ const SETTING_ROWS: SettingRowConfig[] = [
     variant: "action",
     isDisabled: (currentSettings) => currentSettings.alphabeticalSort,
     onSelect: (onCustomSort) => onCustomSort?.(),
+  },
+  {
+    id: "igdbInlineGridDetails",
+    key: "igdbInlineGridDetails",
+    label: "IGDB details on home (grid)",
+    variant: "knob",
   },
 ];
 
@@ -235,7 +247,15 @@ export function SettingsMenu({ onClose, onCustomSort }: SettingsMenuProps) {
       const isMinus = gamepad.buttons[Button.Minus].pressed;
 
       if (!gamepadArmedRef.current) {
-        if (!isA && !isB && !isMinus && !isUp && !isDown && !isLeft && !isRight) {
+        if (
+          !isA &&
+          !isB &&
+          !isMinus &&
+          !isUp &&
+          !isDown &&
+          !isLeft &&
+          !isRight
+        ) {
           gamepadArmedRef.current = true;
           holdRepeatRef.current = { up: null, down: null, left: null };
         }

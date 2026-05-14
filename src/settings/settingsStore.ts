@@ -12,6 +12,7 @@ export type AppSettings = {
   enableSounds: boolean;
   screensaver: boolean;
   customSort: boolean;
+  igdbInlineGridDetails: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   enableSounds: false,
   screensaver: true,
   customSort: false,
+  igdbInlineGridDetails: false,
 };
 
 function storage(): Storage | null {

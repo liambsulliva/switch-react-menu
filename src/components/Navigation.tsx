@@ -14,6 +14,7 @@ interface NavigationProps {
   isNavigationFocused: boolean;
   selectedNavButton: number;
   showPageNumbers?: boolean;
+  centerLabel?: string;
 }
 
 export function Navigation({
@@ -24,6 +25,7 @@ export function Navigation({
   isNavigationFocused,
   selectedNavButton,
   showPageNumbers = true,
+  centerLabel,
 }: NavigationProps) {
   const [prevDefaultSrc, setPrevDefaultSrc] = useState<string | null>(null);
   const [prevFocusedSrc, setPrevFocusedSrc] = useState<string | null>(null);
@@ -101,7 +103,20 @@ export function Navigation({
         onTouchStart={onNextPage}
       />
 
-      {totalPages > 0 &&
+      {centerLabel !== undefined && centerLabel !== "" ? (
+        <Text
+          x={screen.width / 2}
+          y={screen.height - 50}
+          fill={COLORS.gray[0]}
+          fontSize={24}
+          fontFamily="SourceSansPro-Regular"
+          textAlign="center"
+          textBaseline="middle"
+        >
+          {centerLabel}
+        </Text>
+      ) : (
+        totalPages > 0 &&
         (showPageNumbers ? (
           <Text
             x={screen.width / 2}
@@ -130,7 +145,8 @@ export function Navigation({
               />
             );
           })
-        ))}
+        ))
+      )}
     </>
   );
 }

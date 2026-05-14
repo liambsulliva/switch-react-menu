@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, Rect } from "react-tela";
-import { AppData } from "../types/AppData";
 import { truncate } from "../lib/truncate";
 import { AppIcon } from "../components/AppIcon";
 import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
@@ -27,8 +26,17 @@ import { setSettings, useSettings } from "../settings/settingsStore";
 import { setCustomOrder, useCustomOrder } from "../settings/customSortStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
+import {
+  IgdbPs5HeroBackdrop,
+} from "../components/IgdbPs5HeroBackdrop";
+import { useIgdbInlineExperience } from "../hooks/useIgdbInlineExperience";
+import { easeOutDetailEntrance } from "../lib/easing";
 
 const GRID_HOME_WEB_APPLET_URL = "https://google.com";
+
+const GRID_GAP = 48;
+const GRID_ICON_SIZE = 256;
+const GRID_SIDE_MARGIN = 24;
 
 function openSwitchWebApplet(url: string = GRID_HOME_WEB_APPLET_URL) {
   void (async () => {
@@ -42,8 +50,7 @@ export function GridHome() {
   const customOrder = useCustomOrder();
   const hiddenGameIds = useHiddenGameIdSet();
   const lastPlayedId = useLastPlayedApplicationId();
-  const [rawApps, setRawApps] = useState<AppData[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [rawApps, setRawApps] = useState<Switch.Application[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [focusArea, setFocusArea] = useState<GridHomeFocusArea>("apps");
   const [selectedNavButton, setSelectedNavButton] = useState(0);
@@ -51,6 +58,8 @@ export function GridHome() {
   const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
   const [detailsApp, setDetailsApp] = useState<Switch.Application | null>(null);
+  const [inlineIgdbOpen, setInlineIgdbOpen] = useState(false);
+  const [heroPanT, setHeroPanT] = useState(0);
   const [cornerIconSrc, setCornerIconSrc] = useState<string | null>(null);
   const [settingsCogDefaultSrc, setSettingsCogDefaultSrc] = useState<
     string | null
@@ -70,12 +79,11 @@ export function GridHome() {
   const [globeIconFocusedSrc, setGlobeIconFocusedSrc] = useState<string | null>(
     null,
   );
-  const gap = 48;
 
-  const sortedRawApps = useMemo(() => {
+  const sortedApps = useMemo(() => {
     if (settings.alphabeticalSort) {
       return [...rawApps].sort((a, b) =>
-        a.app.name.localeCompare(b.app.name, undefined, {
+        a.name.localeCompare(b.name, undefined, {
           sensitivity: "base",
         }),
       );
@@ -83,8 +91,8 @@ export function GridHome() {
     if (customOrder.length > 0) {
       const orderMap = new Map(customOrder.map((id, i) => [id, i]));
       return [...rawApps].sort((a, b) => {
-        const ai = orderMap.get(a.app.id.toString()) ?? Infinity;
-        const bi = orderMap.get(b.app.id.toString()) ?? Infinity;
+        const ai = orderMap.get(a.id.toString()) ?? Infinity;
+        const bi = orderMap.get(b.id.toString()) ?? Infinity;
         return ai - bi;
       });
     }
@@ -92,49 +100,25 @@ export function GridHome() {
   }, [rawApps, settings.alphabeticalSort, customOrder]);
 
   const apps = useMemo(
-    () =>
-      sortedRawApps.filter(
-        (a) => !hiddenGameIds.has(a.app.id.toString()),
-      ),
-    [sortedRawApps, hiddenGameIds],
+    () => sortedApps.filter((a) => !hiddenGameIds.has(a.id.toString())),
+    [sortedApps, hiddenGameIds],
   );
 
-  const calculateItemsPerPage = (firstItemWidth: number) => {
-    return Math.floor((screen.width - gap) / (firstItemWidth + gap));
-  };
+  const appCount = apps.length;
+
+  const gridViewportWidth = screen.width - GRID_SIDE_MARGIN * 2;
+  const gridViewportX = GRID_SIDE_MARGIN;
+  const gridViewportRight = gridViewportX + gridViewportWidth;
+
+  const jumpStep = useMemo(
+    () =>
+      Math.max(1, Math.floor(gridViewportWidth / (GRID_ICON_SIZE + GRID_GAP))),
+    [gridViewportWidth],
+  );
 
   useEffect(() => {
-    const loadApps = async () => {
-      const switchApps = Array.from(Switch.Application).filter(
-        (app) => app.icon,
-      );
-      const displayedApps: AppData[] = [];
-
-      let x = gap;
-      const y = screen.height / 2 - 128;
-
-      for (const app of switchApps) {
-        let img;
-        if (app.icon) {
-          img = await createImageBitmap(new Blob([app.icon]));
-        }
-        if (!img) continue;
-
-        displayedApps.push({
-          x,
-          y,
-          width: img.width,
-          height: img.height,
-          app,
-        });
-
-        x += img.width + gap;
-      }
-
-      setRawApps(displayedApps);
-    };
-
-    loadApps();
+    const loaded = Array.from(Switch.Application).filter((app) => app.icon);
+    setRawApps(loaded);
   }, []);
 
   useEffect(() => {
@@ -178,68 +162,80 @@ export function GridHome() {
     if (!settings.alphabeticalSort) return;
     const alphabeticalOrder = [...rawApps]
       .sort((a, b) =>
-        a.app.name.localeCompare(b.app.name, undefined, {
+        a.name.localeCompare(b.name, undefined, {
           sensitivity: "base",
         }),
       )
-      .map((app) => app.app.id.toString());
+      .map((app) => app.id.toString());
     setCustomOrder(alphabeticalOrder);
   }, [settings.alphabeticalSort, rawApps]);
 
-  const itemsPerPage =
-    apps.length > 0 ? calculateItemsPerPage(apps[0].width) : 0;
-  const totalPages =
-    itemsPerPage > 0 ? Math.ceil(apps.length / itemsPerPage) : 0;
-  const paginatedApps = apps.slice(
-    currentPage * itemsPerPage,
-    (currentPage + 1) * itemsPerPage,
-  );
-
   useEffect(() => {
-    if (totalPages === 0) {
-      if (currentPage !== 0) setCurrentPage(0);
+    if (appCount === 0) {
       if (selectedIndex !== 0) setSelectedIndex(0);
       return;
     }
-    if (currentPage >= totalPages) {
-      setCurrentPage(totalPages - 1);
+    if (selectedIndex >= appCount) {
+      setSelectedIndex(appCount - 1);
     }
-  }, [totalPages, currentPage, selectedIndex]);
+  }, [appCount, selectedIndex]);
 
-  const handlePrevPage = () => {
-    if (totalPages <= 1) return;
-    setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1));
-  };
+  useEffect(() => {
+    if (!settings.igdbInlineGridDetails) {
+      setInlineIgdbOpen(false);
+    }
+  }, [settings.igdbInlineGridDetails]);
 
-  const handleNextPage = () => {
-    if (totalPages <= 1) return;
-    setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
-  };
+  useEffect(() => {
+    if (settings.igdbInlineGridDetails && focusArea === "navigation") {
+      setFocusArea("apps");
+    }
+  }, [settings.igdbInlineGridDetails, focusArea]);
 
-  const rowInnerWidth =
-    paginatedApps.reduce((sum, app) => sum + app.width, 0) +
-    Math.max(0, paginatedApps.length - 1) * gap;
-  const rowStartX =
-    paginatedApps.length === 0 ? 0 : (screen.width - rowInnerWidth) / 2;
+  const onStepPrev = useCallback(() => {
+    setSelectedIndex((i) => Math.max(0, i - 1));
+  }, []);
 
-  let rowX = rowStartX;
-  const visibleApps = paginatedApps.map((app) => {
-    const placed = { ...app, x: rowX };
-    rowX += app.width + gap;
-    return placed;
-  });
-  const visibleAppSlots = Array.from(
-    { length: visibleApps.length },
-    (_, index) => {
-      return visibleApps[index];
-    },
+  const onStepNext = useCallback(() => {
+    setSelectedIndex((i) => Math.min(Math.max(0, appCount - 1), i + 1));
+  }, [appCount]);
+
+  const openInlineIgdb = useCallback(() => setInlineIgdbOpen(true), []);
+  const closeInlineIgdb = useCallback(() => setInlineIgdbOpen(false), []);
+
+  const selectedApp = appCount > 0 ? apps[selectedIndex] ?? null : null;
+  const igdbInlineActive =
+    settings.igdbInlineGridDetails && inlineIgdbOpen && selectedApp !== null;
+
+  const { fetchState, heroImageUrl } = useIgdbInlineExperience(
+    selectedApp,
+    igdbInlineActive,
   );
 
+  useEffect(() => {
+    if (!igdbInlineActive) {
+      setHeroPanT(0);
+      return;
+    }
+    setHeroPanT(0);
+    const t0 = performance.now();
+    const durationMs = 520;
+    let raf = 0;
+    const step = (now: number) => {
+      const linearT = Math.min(1, (now - t0) / durationMs);
+      setHeroPanT(easeOutDetailEntrance(linearT));
+      if (linearT < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [igdbInlineActive]);
+
   useGamepadNavigation({
-    onPrevPage: handlePrevPage,
-    onNextPage: handleNextPage,
+    apps,
+    jumpStep,
+    onStepPrev,
+    onStepNext,
     setSelectedIndex,
-    paginatedApps,
     selectedIndex,
     focusArea,
     setFocusArea,
@@ -250,22 +246,38 @@ export function GridHome() {
     onOpenAlbum: () => setShowAlbum(true),
     onOpenWebBrowser: () => openSwitchWebApplet(),
     onMinus: () => {
-      const app = paginatedApps[selectedIndex]?.app;
+      const app = apps[selectedIndex];
       if (app) setDetailsApp(app);
     },
+    replaceBottomNavWithIgdb: settings.igdbInlineGridDetails,
+    inlineDetailsOpen: inlineIgdbOpen,
+    onOpenInlineDetails: openInlineIgdb,
+    onCloseInlineDetails: closeInlineIgdb,
   });
 
   const handleAppSelect = (index: number) => {
-    const selectedApp = paginatedApps[index];
-    if (!selectedApp) return;
+    const picked = apps[index];
+    if (!picked) return;
     if (index === selectedIndex) {
-      const app = selectedApp.app;
-      recordLastPlayed(app);
-      app.launch();
+      recordLastPlayed(picked);
+      picked.launch();
     } else {
       setSelectedIndex(index);
     }
   };
+
+  const iconW = GRID_ICON_SIZE;
+  const iconH = GRID_ICON_SIZE;
+  const quarterScreenH = Math.floor(screen.height / 4);
+  const iconLiftY =
+    igdbInlineActive ? -quarterScreenH * heroPanT : 0;
+  const iconBaseY = screen.height / 2 - iconH / 2 + iconLiftY;
+  const totalRowWidth =
+    appCount > 0 ? appCount * (iconW + GRID_GAP) - GRID_GAP : 0;
+  const selectedCenterX = selectedIndex * (iconW + GRID_GAP) + iconW / 2;
+  const idealScrollX = selectedCenterX - gridViewportWidth / 2;
+  const maxScrollX = Math.max(0, totalRowWidth - gridViewportWidth);
+  const scrollX = Math.max(0, Math.min(idealScrollX, maxScrollX));
 
   if (showAlbum) {
     return <AlbumPage onClose={() => setShowAlbum(false)} />;
@@ -287,7 +299,7 @@ export function GridHome() {
   if (showCustomSort) {
     return (
       <CustomSortMode
-        apps={sortedRawApps.map((a) => a.app)}
+        apps={sortedApps}
         compact={false}
         onDone={(newOrder) => {
           setCustomOrder(newOrder);
@@ -319,6 +331,9 @@ export function GridHome() {
   const cornerIconX = 32;
   const cornerIconY = settingsBtnCenterY - cornerIconSize / 2;
 
+  const navCenterLabel =
+    appCount > 0 ? `${selectedIndex + 1} / ${appCount}` : undefined;
+
   return (
     <>
       <Rect
@@ -329,7 +344,16 @@ export function GridHome() {
         fill={COLORS.background}
       />
 
-      {cornerIconSrc && (
+      {igdbInlineActive && selectedApp && (
+        <IgdbPs5HeroBackdrop
+          panT={heroPanT}
+          imageUrl={heroImageUrl}
+          app={selectedApp}
+          fetchState={fetchState}
+        />
+      )}
+
+      {!igdbInlineActive && cornerIconSrc && (
         <Image
           src={cornerIconSrc}
           x={cornerIconX}
@@ -339,7 +363,7 @@ export function GridHome() {
         />
       )}
 
-      {globeIconDefaultSrc && globeIconFocusedSrc && (
+      {!igdbInlineActive && globeIconDefaultSrc && globeIconFocusedSrc && (
         <Image
           src={
             focusArea === "globe" ? globeIconFocusedSrc : globeIconDefaultSrc
@@ -350,16 +374,18 @@ export function GridHome() {
           height={globeIconSize}
         />
       )}
-      <Rect
-        x={globeIconX + globeIconSize / 2 - globeIconHitW / 2}
-        y={globeIconY + globeIconSize / 2 - globeIconHitH / 2}
-        width={globeIconHitW}
-        height={globeIconHitH}
-        fill="transparent"
-        onTouchStart={() => openSwitchWebApplet()}
-      />
+      {!igdbInlineActive && (
+        <Rect
+          x={globeIconX + globeIconSize / 2 - globeIconHitW / 2}
+          y={globeIconY + globeIconSize / 2 - globeIconHitH / 2}
+          width={globeIconHitW}
+          height={globeIconHitH}
+          fill="transparent"
+          onTouchStart={() => openSwitchWebApplet()}
+        />
+      )}
 
-      {albumIconDefaultSrc && albumIconFocusedSrc && (
+      {!igdbInlineActive && albumIconDefaultSrc && albumIconFocusedSrc && (
         <Image
           src={
             focusArea === "album" ? albumIconFocusedSrc : albumIconDefaultSrc
@@ -370,16 +396,18 @@ export function GridHome() {
           height={albumIconSize}
         />
       )}
-      <Rect
-        x={albumIconX + albumIconSize / 2 - albumIconHitW / 2}
-        y={albumIconY + albumIconSize / 2 - albumIconHitH / 2}
-        width={albumIconHitW}
-        height={albumIconHitH}
-        fill="transparent"
-        onTouchStart={() => setShowAlbum(true)}
-      />
+      {!igdbInlineActive && (
+        <Rect
+          x={albumIconX + albumIconSize / 2 - albumIconHitW / 2}
+          y={albumIconY + albumIconSize / 2 - albumIconHitH / 2}
+          width={albumIconHitW}
+          height={albumIconHitH}
+          fill="transparent"
+          onTouchStart={() => setShowAlbum(true)}
+        />
+      )}
 
-      {settingsCogDefaultSrc && settingsCogFocusedSrc && (
+      {!igdbInlineActive && settingsCogDefaultSrc && settingsCogFocusedSrc && (
         <Image
           src={
             focusArea === "settings"
@@ -392,39 +420,58 @@ export function GridHome() {
           height={settingsCogSize}
         />
       )}
-      <Rect
-        x={settingsBtnCenterX - settingsBtnW / 2}
-        y={settingsBtnCenterY - settingsBtnH / 2}
-        width={settingsBtnW}
-        height={settingsBtnH}
-        fill="transparent"
-        onTouchStart={() => setShowSettings(true)}
-      />
-
-      {visibleAppSlots.map((displayedApp, index) => (
-        <AppIcon
-          key={`app-slot-${index}`}
-          displayedApp={displayedApp}
-          truncate={truncate}
-          isSelected={focusArea === "apps" && index === selectedIndex}
-          onSelect={() => handleAppSelect(index)}
-          showTitle={settings.showAppTitles}
-          showLastPlayedEyebrow={
-            settings.showLastPlayed &&
-            lastPlayedId !== null &&
-            displayedApp.app.id.toString() === lastPlayedId
-          }
+      {!igdbInlineActive && (
+        <Rect
+          x={settingsBtnCenterX - settingsBtnW / 2}
+          y={settingsBtnCenterY - settingsBtnH / 2}
+          width={settingsBtnW}
+          height={settingsBtnH}
+          fill="transparent"
+          onTouchStart={() => setShowSettings(true)}
         />
-      ))}
-      <Navigation
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPrevPage={handlePrevPage}
-        onNextPage={handleNextPage}
-        isNavigationFocused={focusArea === "navigation"}
-        selectedNavButton={selectedNavButton}
-        showPageNumbers={settings.showPageNumbers}
-      />
+      )}
+
+      {apps.map((app, i) => {
+        const baseX = i * (iconW + GRID_GAP);
+        const renderX = gridViewportX + baseX - scrollX;
+
+        if (renderX + iconW < gridViewportX || renderX > gridViewportRight) {
+          return null;
+        }
+
+        return (
+          <AppIcon
+            key={app.id.toString()}
+            app={app}
+            x={renderX}
+            y={iconBaseY}
+            width={iconW}
+            height={iconH}
+            truncate={truncate}
+            isSelected={focusArea === "apps" && i === selectedIndex}
+            onSelect={() => handleAppSelect(i)}
+            showTitle={settings.showAppTitles}
+            showLastPlayedEyebrow={
+              settings.showLastPlayed &&
+              lastPlayedId !== null &&
+              app.id.toString() === lastPlayedId
+            }
+          />
+        );
+      })}
+
+      {!settings.igdbInlineGridDetails && (
+        <Navigation
+          currentPage={selectedIndex}
+          totalPages={appCount}
+          onPrevPage={onStepPrev}
+          onNextPage={onStepNext}
+          isNavigationFocused={focusArea === "navigation"}
+          selectedNavButton={selectedNavButton}
+          showPageNumbers={settings.showPageNumbers}
+          centerLabel={navCenterLabel}
+        />
+      )}
 
       {detailsApp && (
         <Modal
