@@ -5,9 +5,14 @@ export type IgdbBundledCatalogFile = {
   games: IgdbGameDetails[];
 };
 
-let cached: Promise<IgdbBundledCatalogFile> | null = null;
-
 const ROMFS_PATH = "romfs:/igdb-popular-games.json";
+
+type InstalledAppForIgdb = Pick<Switch.Application, "id" | "name">;
+
+let catalogLoadPromise: Promise<IgdbGameDetails[]> | null = null;
+let installedMatchPromise: Promise<void> | null = null;
+let installedMatchSignature = "";
+const installedMatchesByAppId = new Map<string, IgdbGameDetails | null>();
 
 function parseCatalogBuffer(buf: ArrayBuffer): IgdbBundledCatalogFile {
   const text = new TextDecoder().decode(buf);
@@ -50,28 +55,28 @@ function parseCatalogBuffer(buf: ArrayBuffer): IgdbBundledCatalogFile {
       trailers,
     });
   }
+  const generatedAt = (raw as { generatedAt?: unknown }).generatedAt;
   return {
-    generatedAt:
-      typeof (raw as { generatedAt?: unknown }).generatedAt === "string"
-        ? (raw as { generatedAt: string }).generatedAt
-        : undefined,
+    generatedAt: typeof generatedAt === "string" ? generatedAt : undefined,
     games: out,
   };
 }
 
-export function getBundledIgdbCatalog(): Promise<IgdbBundledCatalogFile> {
-  if (!cached) {
-    cached = (async () => {
+async function loadBundledIgdbGames(): Promise<IgdbGameDetails[]> {
+  if (!catalogLoadPromise) {
+    catalogLoadPromise = (async () => {
       try {
         const buf = await Switch.readFile(ROMFS_PATH);
-        if (!buf || buf.byteLength === 0) return { games: [] };
-        return parseCatalogBuffer(buf);
+        if (!buf || buf.byteLength === 0) return [];
+        return parseCatalogBuffer(buf).games;
       } catch {
-        return { games: [] };
+        return [];
+      } finally {
+        catalogLoadPromise = null;
       }
     })();
   }
-  return cached;
+  return catalogLoadPromise;
 }
 
 export function normalizeGameTitleForMatch(s: string): string {
@@ -83,12 +88,16 @@ export function normalizeGameTitleForMatch(s: string): string {
     .trim();
 }
 
-export function findBundledIgdbMatch(
+function findBundledIgdbMatch(
   games: readonly IgdbGameDetails[],
+  exactByTitle: ReadonlyMap<string, IgdbGameDetails>,
   localTitle: string,
 ): IgdbGameDetails | null {
   const n = normalizeGameTitleForMatch(localTitle);
   if (!n) return null;
+
+  const exact = exactByTitle.get(n);
+  if (exact) return exact;
 
   let best: IgdbGameDetails | null = null;
   let bestScore = 0;
@@ -107,4 +116,50 @@ export function findBundledIgdbMatch(
   }
 
   return bestScore >= 75 ? best : null;
+}
+
+function signatureForInstalledApps(apps: readonly InstalledAppForIgdb[]): string {
+  return apps.map((app) => `${app.id.toString()}:${app.name}`).join("|");
+}
+
+export function initializeInstalledIgdbMatches(
+  installedApps: Iterable<InstalledAppForIgdb>,
+): Promise<void> {
+  const apps = Array.from(installedApps);
+  const signature = signatureForInstalledApps(apps);
+
+  if (installedMatchPromise && installedMatchSignature === signature) {
+    return installedMatchPromise;
+  }
+
+  installedMatchSignature = signature;
+  installedMatchPromise = (async () => {
+    const games = await loadBundledIgdbGames();
+    const exactByTitle = new Map<string, IgdbGameDetails>();
+    for (const game of games) {
+      const key = normalizeGameTitleForMatch(game.name);
+      if (key && !exactByTitle.has(key)) exactByTitle.set(key, game);
+    }
+
+    installedMatchesByAppId.clear();
+    for (const app of apps) {
+      installedMatchesByAppId.set(
+        app.id.toString(),
+        findBundledIgdbMatch(games, exactByTitle, app.name),
+      );
+    }
+  })();
+
+  return installedMatchPromise;
+}
+
+export async function getInstalledIgdbMatch(
+  app: InstalledAppForIgdb,
+): Promise<IgdbGameDetails | null> {
+  if (!installedMatchPromise) {
+    await initializeInstalledIgdbMatches([app]);
+  } else {
+    await installedMatchPromise;
+  }
+  return installedMatchesByAppId.get(app.id.toString()) ?? null;
 }

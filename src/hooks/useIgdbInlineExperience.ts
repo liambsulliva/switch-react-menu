@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import type { IgdbGameDetails } from "../lib/igdb";
-import {
-  findBundledIgdbMatch,
-  getBundledIgdbCatalog,
-} from "../lib/igdbBundledCatalog";
+import { getInstalledIgdbMatch } from "../lib/igdbBundledCatalog";
 import { canFetchRemoteIgdbUrls } from "../lib/remoteIgdbAssets";
 
 export type IgdbInlineFetchState =
@@ -44,9 +41,8 @@ export function useIgdbInlineExperience(
 
     void (async () => {
       try {
-        const catalog = await getBundledIgdbCatalog();
+        const bundled = await getInstalledIgdbMatch(app);
         if (ac.signal.aborted) return;
-        const bundled = findBundledIgdbMatch(catalog.games, app.name);
         setFetchState({ status: "ok", data: bundled });
         const cover =
           canFetchRemoteIgdbUrls() && bundled?.coverUrl

@@ -1,6 +1,7 @@
 import React from "react";
 import { render } from "react-tela/render";
 import { App } from "./App";
+import { initializeInstalledIgdbMatches } from "./lib/igdbBundledCatalog";
 
 async function loadFonts() {
   const regularFontData =
@@ -14,6 +15,11 @@ async function loadFonts() {
   fonts.add(boldFont);
 }
 
-loadFonts();
+async function bootstrap() {
+  const installedApps = Array.from(Switch.Application).filter((app) => app.icon);
+  await Promise.all([loadFonts(), initializeInstalledIgdbMatches(installedApps)]);
 
-render(<App />, screen as unknown as Parameters<typeof render>[1]);
+  render(<App />, screen as unknown as Parameters<typeof render>[1]);
+}
+
+void bootstrap();
