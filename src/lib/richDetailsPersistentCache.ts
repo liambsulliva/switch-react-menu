@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import type { IconHeroRgbPair } from "./iconHeroGradientPalette";
 import type { RichGameDetails } from "./richGameDetails";
 
