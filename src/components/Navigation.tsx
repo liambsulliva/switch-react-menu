@@ -13,7 +13,8 @@ interface NavigationProps {
   onNextPage: () => void;
   isNavigationFocused: boolean;
   selectedNavButton: number;
-  showPageNumbers?: boolean;
+  /** Numerical: "1 / N" or `centerLabel`; dots: page indicators. */
+  navigationStyle?: "numerical" | "dots";
   centerLabel?: string;
 }
 
@@ -24,7 +25,7 @@ export function Navigation({
   onNextPage,
   isNavigationFocused,
   selectedNavButton,
-  showPageNumbers = true,
+  navigationStyle = "numerical",
   centerLabel,
 }: NavigationProps) {
   const [prevDefaultSrc, setPrevDefaultSrc] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export function Navigation({
         onTouchStart={onNextPage}
       />
 
-      {showPageNumbers ? (
+      {navigationStyle === "numerical" ? (
         centerLabel !== undefined && centerLabel !== "" ? (
           <Text
             x={screen.width / 2}

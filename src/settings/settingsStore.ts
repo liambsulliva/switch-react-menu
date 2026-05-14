@@ -65,11 +65,38 @@ export function nextSortingMode(
   return sequence[idx]!;
 }
 
+export type NavigationStyle = "numerical" | "dots";
+
+const NAVIGATION_STYLE_VALUES: NavigationStyle[] = ["numerical", "dots"];
+const NAVIGATION_STYLE_SET = new Set<NavigationStyle>(NAVIGATION_STYLE_VALUES);
+
+export function isNavigationStyle(value: unknown): value is NavigationStyle {
+  return (
+    typeof value === "string" &&
+    NAVIGATION_STYLE_SET.has(value as NavigationStyle)
+  );
+}
+
+export function navigationStyleLabel(style: NavigationStyle): string {
+  switch (style) {
+    case "numerical":
+      return "Numerical";
+    case "dots":
+      return "Dots";
+    default:
+      return "Numerical";
+  }
+}
+
+export function nextNavigationStyle(current: NavigationStyle): NavigationStyle {
+  return current === "numerical" ? "dots" : "numerical";
+}
+
 export type AppSettings = {
   disableRichDetails: boolean;
   showAppTitles: boolean;
   enableHaptics: boolean;
-  showPageNumbers: boolean;
+  navigationStyle: NavigationStyle;
   sortingMode: SortingMode;
   compactView: boolean;
   showLastPlayed: boolean;
@@ -82,7 +109,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   disableRichDetails: false,
   showAppTitles: true,
   enableHaptics: true,
-  showPageNumbers: true,
+  navigationStyle: "numerical",
   sortingMode: "recentlyPlayed",
   compactView: false,
   showLastPlayed: false,
@@ -108,6 +135,7 @@ function loadSettings(): AppSettings {
           igdbInlineGridDetails?: boolean;
           alphabeticalSort?: boolean;
           customSort?: boolean;
+          showPageNumbers?: boolean;
         }
       >;
       const heroSplashInlineGrid =
@@ -117,6 +145,8 @@ function loadSettings(): AppSettings {
         alphabeticalSort: legacyAlphabetical,
         customSort: _legacyCustomSort,
         sortingMode: parsedMode,
+        showPageNumbers: legacyShowPageNumbers,
+        navigationStyle: parsedNavigationStyle,
         ...rest
       } = parsed;
 
@@ -129,11 +159,19 @@ function loadSettings(): AppSettings {
         sortingMode = "recentlyPlayed";
       }
 
+      let navigationStyle: NavigationStyle = DEFAULT_SETTINGS.navigationStyle;
+      if (isNavigationStyle(parsedNavigationStyle)) {
+        navigationStyle = parsedNavigationStyle;
+      } else if (typeof legacyShowPageNumbers === "boolean") {
+        navigationStyle = legacyShowPageNumbers ? "numerical" : "dots";
+      }
+
       const merged: AppSettings = {
         ...DEFAULT_SETTINGS,
         ...rest,
         heroSplashInlineGrid,
         sortingMode,
+        navigationStyle,
       };
       merged.sortingMode = normalizeSortingModeForRichDetails(
         merged.sortingMode,

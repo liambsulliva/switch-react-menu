@@ -8,6 +8,8 @@ import React, {
 import { Button } from "@nx.js/constants";
 import {
   getSettings,
+  navigationStyleLabel,
+  nextNavigationStyle,
   nextSortingMode,
   setSettings,
   sortingModeLabel,
@@ -94,22 +96,20 @@ const SETTING_ROWS: SettingRowConfig[] = [
     onSelect: ({ onCustomSort }) => onCustomSort?.(),
   },
   {
-    id: "showLastPlayed",
-    key: "showLastPlayed",
-    label: "Show Last Played",
-    variant: "knob",
+    id: "navigationStyle",
+    label: "Pagination Style",
+    variant: "caption",
+    caption: (s) => navigationStyleLabel(s.navigationStyle),
+    isDisabled: (s) => !s.disableRichDetails,
+    onSelect: (_handlers) => {
+      const s = getSettings();
+      setSettings({ navigationStyle: nextNavigationStyle(s.navigationStyle) });
+    },
   },
   {
     id: "showAppTitles",
     key: "showAppTitles",
     label: "Show App Titles",
-    variant: "knob",
-    isDisabled: (s) => !s.disableRichDetails,
-  },
-  {
-    id: "showPageNumbers",
-    key: "showPageNumbers",
-    label: "Show Page Numbers",
     variant: "knob",
     isDisabled: (s) => !s.disableRichDetails,
   },
@@ -125,6 +125,12 @@ const SETTING_ROWS: SettingRowConfig[] = [
     key: "screensaver",
     label: "Screensaver",
     isDisabled: () => true,
+    variant: "knob",
+  },
+  {
+    id: "showLastPlayed",
+    key: "showLastPlayed",
+    label: "Show Last Played",
     variant: "knob",
   },
   {

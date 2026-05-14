@@ -498,7 +498,7 @@ export function GridHome() {
           onNextPage={onStepNext}
           isNavigationFocused={focusArea === "navigation"}
           selectedNavButton={selectedNavButton}
-          showPageNumbers={settings.showPageNumbers}
+          navigationStyle={settings.navigationStyle}
           centerLabel={navCenterLabel}
         />
       )}
