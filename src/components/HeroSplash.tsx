@@ -1,5 +1,11 @@
 import React, { useMemo } from "react";
 import { Image, Rect, Text } from "react-tela";
+import {
+  Badge,
+  computeBadgeMetrics,
+  estimateBadgeOuterWidth,
+  type BadgeVariant,
+} from "./Badge";
 import { Button } from "./Button";
 import { COLORS } from "../lib/colors";
 import type { HeroSplashInlineFetchState } from "../hooks/useHeroSplashInlineExperience";
@@ -122,11 +128,101 @@ export function HeroSplash({
   const charsPerLine = Math.max(20, Math.floor(textW / 10));
 
   const yTitle = heroTop + padding;
-  const yAfterTitle = yTitle + 34;
+
+  const heroTags =
+    state.status === "ok" && state.data?.tags?.length
+      ? state.data.tags
+      : [];
+
+  const badgeLayout = useMemo(() => {
+    const MAX_TAGS = 10;
+    const ROW_H = computeBadgeMetrics({
+      label: "Ag",
+      fontSize: 13,
+      padX: 10,
+      padY: 4,
+      maxLabelChars: 18,
+    }).height;
+    const pad = 6;
+    const rowGap = 6;
+    const maxRight = textX + textW;
+    const maxRows = 2;
+    const variants: BadgeVariant[] = ["default", "muted", "accent"];
+    if (heroTags.length === 0) {
+      return {
+        items: [] as Array<{
+          key: string;
+          x: number;
+          y: number;
+          label: string;
+          variant: BadgeVariant;
+        }>,
+        blockH: 0,
+      };
+    }
+    const tagsForBadges = heroTags.slice(0, MAX_TAGS);
+    const truncated = heroTags.length > MAX_TAGS;
+    const ellipsisLabel = "…";
+    const ellipsisW = estimateBadgeOuterWidth(ellipsisLabel, {
+      fontSize: 13,
+      padX: 10,
+      maxLabelChars: 3,
+    });
+
+    let cx = textX;
+    let cy = 0;
+    let row = 0;
+    const items: Array<{
+      key: string;
+      x: number;
+      y: number;
+      label: string;
+      variant: BadgeVariant;
+    }> = [];
+
+    const place = (
+      key: string,
+      label: string,
+      w: number,
+      variant: BadgeVariant,
+    ): boolean => {
+      if (cx + w > maxRight && cx > textX) {
+        row += 1;
+        if (row >= maxRows) return false;
+        cx = textX;
+        cy += ROW_H + rowGap;
+      }
+      items.push({ key, x: cx, y: cy, label, variant });
+      cx += w + pad;
+      return true;
+    };
+
+    for (let i = 0; i < tagsForBadges.length; i++) {
+      const label = tagsForBadges[i]!;
+      const w = estimateBadgeOuterWidth(label, {
+        fontSize: 13,
+        padX: 10,
+        maxLabelChars: 18,
+      });
+      if (!place(`tag-${i}`, label, w, variants[items.length % 3]!)) break;
+    }
+
+    if (truncated) {
+      place("tag-more", ellipsisLabel, ellipsisW, "muted");
+    }
+
+    const blockH =
+      items.length === 0 ? 0 : Math.max(...items.map((it) => it.y)) + ROW_H;
+    return { items, blockH };
+  }, [heroTags, textX, textW]);
+
+  const yTagsBase = yTitle + 30;
+  const yLine2 =
+    badgeLayout.items.length > 0
+      ? yTagsBase + badgeLayout.blockH + 8
+      : yTitle + 34;
   const summaryStartY =
-    state.status === "ok" && state.data !== null
-      ? yAfterTitle + 26
-      : yAfterTitle + 6;
+    state.status === "ok" && state.data !== null ? yLine2 + 26 : yLine2 + 6;
   const maxSummaryLines = Math.max(
     3,
     Math.min(10, Math.floor((heroTop + HERO_H - summaryStartY - 48) / 20)),
@@ -243,10 +339,21 @@ export function HeroSplash({
         {truncateEnd(title, 44)}
       </Text>
 
+      {badgeLayout.items.map((b) => (
+        <Badge
+          key={b.key}
+          x={b.x}
+          y={yTagsBase + b.y}
+          label={b.label}
+          variant={b.variant}
+          maxLabelChars={18}
+        />
+      ))}
+
       {(state.status === "loading" || state.status === "idle") && (
         <Text
           x={textX}
-          y={yAfterTitle}
+          y={yLine2}
           fill={COLORS.gray[400]}
           fontSize={19}
           fontFamily="SourceSansPro-Regular"
@@ -260,7 +367,7 @@ export function HeroSplash({
       {state.status === "error" && (
         <Text
           x={textX}
-          y={yAfterTitle}
+          y={yLine2}
           fill={COLORS.gray[400]}
           fontSize={17}
           fontFamily="SourceSansPro-Regular"
@@ -274,7 +381,7 @@ export function HeroSplash({
       {state.status === "ok" && state.data === null && (
         <Text
           x={textX}
-          y={yAfterTitle}
+          y={yLine2}
           fill={COLORS.gray[500]}
           fontSize={17}
           fontFamily="SourceSansPro-Regular"
@@ -289,7 +396,7 @@ export function HeroSplash({
         <>
           <Text
             x={textX}
-            y={yAfterTitle}
+            y={yLine2}
             fill={COLORS.gray[400]}
             fontSize={17}
             fontFamily="SourceSansPro-Regular"

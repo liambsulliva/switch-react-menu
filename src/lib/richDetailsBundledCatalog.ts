@@ -233,6 +233,14 @@ function parseCatalogBuffer(buf: ArrayBuffer): RichBundledCatalogFile {
         });
       }
     }
+    const tagsRaw = r.tags;
+    const tags: string[] = [];
+    if (Array.isArray(tagsRaw)) {
+      for (const t of tagsRaw) {
+        if (typeof t === "string" && t.trim()) tags.push(t.trim());
+      }
+    }
+
     out.push({
       name,
       summary: typeof r.summary === "string" ? r.summary : null,
@@ -242,6 +250,7 @@ function parseCatalogBuffer(buf: ArrayBuffer): RichBundledCatalogFile {
       backgroundUrl:
         typeof r.backgroundUrl === "string" ? r.backgroundUrl : null,
       trailers,
+      tags,
     });
   }
   const generatedAt = (raw as { generatedAt?: unknown }).generatedAt;

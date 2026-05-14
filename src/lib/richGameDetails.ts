@@ -10,6 +10,7 @@ export type RichGameDetails = {
   coverUrl: string | null;
   backgroundUrl: string | null;
   trailers: RichTrailer[];
+  tags: string[];
 };
 
 export function formatRichReleaseDate(ts: number | null): string {

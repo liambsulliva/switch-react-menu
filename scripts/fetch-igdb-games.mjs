@@ -185,7 +185,7 @@ async function fetchAllSwitchGames(clientId, token, onProgress) {
     const body = [
       [
         "fields name,summary,first_release_date,cover.image_id",
-        "screenshots.image_id,artworks.image_id,videos,id;",
+        "screenshots.image_id,artworks.image_id,videos,id,genres.name,franchises.name,game_modes.name;",
       ].join(","),
       `where platforms = (${NINTENDO_SWITCH_PLATFORM_ID}) & version_parent = null;`,
       "sort total_rating_count desc;",
@@ -251,6 +251,42 @@ async function fetchVideoRows(clientId, token, ids, onChunk) {
     }
   }
   return map;
+}
+
+/** Genres, franchise names, and non–single-player game modes (multiplayer, co-op, etc.). */
+function buildCatalogTags(game) {
+  const seen = new Set();
+  const out = [];
+  const push = (raw) => {
+    const s = typeof raw === "string" ? raw.trim() : "";
+    if (!s) return;
+    const k = s.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(s);
+  };
+
+  const genres = game?.genres;
+  if (Array.isArray(genres)) {
+    for (const g of genres) push(g?.name);
+  }
+
+  const franchises = game?.franchises;
+  if (Array.isArray(franchises)) {
+    for (const f of franchises) push(f?.name);
+  }
+
+  const modes = game?.game_modes;
+  if (Array.isArray(modes)) {
+    for (const m of modes) {
+      const n = typeof m?.name === "string" ? m.name.trim() : "";
+      if (!n) continue;
+      if (/^single\s*player$/i.test(n)) continue;
+      push(n);
+    }
+  }
+
+  return out;
 }
 
 function trailersForGame(videos, videoById) {
@@ -352,6 +388,7 @@ async function main() {
       coverUrl: coverUrl(g.cover?.image_id),
       backgroundUrl: backgroundUrl(g),
       trailers: trailersForGame(g.videos, videoById),
+      tags: buildCatalogTags(g),
     });
     const scanned = idx + 1;
     if (scanned % 48 === 0 || scanned === totalGames) {
