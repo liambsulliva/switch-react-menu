@@ -19,6 +19,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import {
   getAlbumIconPng,
   getCornerIconPng,
+  getDownArrowPng,
   getGlobeIconPng,
   getSearchIconPng,
   getSettingsCogPng,
@@ -86,6 +87,7 @@ const SEARCH_BAR_FONT_DEFAULT_PX = 22;
 const SEARCH_BAR_FONT_SEARCH_INPUT_PX = 18;
 const SEARCH_BAR_DISPLAY_MAX_CHARS_DEFAULT = 42;
 const SEARCH_BAR_DISPLAY_MAX_CHARS_SEARCH_INPUT = 52;
+const DOWN_NAV_HINT_ARROW_PX = 36;
 const switchSearchKeyboardReservePx = () =>
   Math.min(
     Math.max(Math.floor(screen.height * 0.4), 280),
@@ -145,6 +147,9 @@ export function GridHome() {
   const [searchIconFocusedSrc, setSearchIconFocusedSrc] = useState<
     string | null
   >(null);
+  const [downNavHintIconSrc, setDownNavHintIconSrc] = useState<string | null>(
+    null,
+  );
 
   const sortedApps = useMemo(
     () => sortApplicationsForMode(rawApps, settings.sortingMode, customOrder),
@@ -305,6 +310,7 @@ export function GridHome() {
       getSearchIconPng(COLORS.gray[0]),
       getSettingsCogPng(COLORS.gray[400]),
       getSettingsCogPng(COLORS.gray[0]),
+      getDownArrowPng(COLORS.gray[400]),
     ]).then(
       ([
         corner,
@@ -316,6 +322,7 @@ export function GridHome() {
         searchFocused,
         settingsDefault,
         settingsFocused,
+        downNavHint,
       ]) => {
         if (!active) return;
         setCornerIconSrc(corner);
@@ -327,6 +334,7 @@ export function GridHome() {
         setSearchIconFocusedSrc(searchFocused);
         setSettingsCogDefaultSrc(settingsDefault);
         setSettingsCogFocusedSrc(settingsFocused);
+        setDownNavHintIconSrc(downNavHint);
       },
     );
 
@@ -711,6 +719,14 @@ export function GridHome() {
   const navCenterLabel =
     appCount > 0 ? `${selectedIndex + 1} / ${appCount}` : undefined;
   const searchFieldLocksNavigation = focusArea === "searchInput";
+  const showDownNavHint =
+    heroSplashOnGridEnabled &&
+    focusArea === "apps" &&
+    !heroSplashInlineActive &&
+    !heroSplashInlineOpen;
+  const navBottomArrowY = screen.height - 60;
+  const downNavHintImgLeft = screen.width / 2 - DOWN_NAV_HINT_ARROW_PX / 2;
+  const downNavHintImgTop = navBottomArrowY;
 
   return (
     <>
@@ -930,6 +946,16 @@ export function GridHome() {
           />
         );
       })}
+
+      {showDownNavHint && downNavHintIconSrc && (
+        <Image
+          src={downNavHintIconSrc}
+          x={downNavHintImgLeft}
+          y={downNavHintImgTop}
+          width={DOWN_NAV_HINT_ARROW_PX}
+          height={DOWN_NAV_HINT_ARROW_PX}
+        />
+      )}
 
       {!heroSplashOnGridEnabled && (
         <Navigation
