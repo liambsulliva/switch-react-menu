@@ -70,11 +70,13 @@ import {
 
 const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
-const GRID_SIDE_MARGIN = 24;
+const GRID_SIDE_MARGIN_HOME_PX = 64;
+const GRID_SIDE_MARGIN_SEARCH_INPUT_PX = 24;
 const SEARCH_BAR_SIDE_PADDING = 15;
 const HOME_TOP_BAR_ROW_CENTER_Y = 50;
+const HOME_DIGITAL_CLOCK_EXTRA_RIGHT_INSET_PX = 28;
 const HOME_SEARCH_BAR_HEIGHT_PX = 36;
-const SEARCH_LAYOUT_MARGIN_BAR_TO_ICON_ROW_PX = -75;
+const HOME_SEARCH_LAYOUT_ICON_ROW_OVERLAP_SEARCH_BAR_PX = 75;
 const APP_ICON_TITLE_GAP_BELOW_DEFAULT_PX = 20;
 const APP_ICON_TITLE_GAP_BELOW_SEARCH_PX = 5;
 const APP_ICON_TITLE_FONT_DEFAULT_PX = 24;
@@ -233,10 +235,6 @@ export function GridHome() {
   const heroSplashOnGridEnabled =
     richDetailsExperienceEnabled && settings.heroSplashInlineGrid;
 
-  const gridViewportWidth = screen.width - GRID_SIDE_MARGIN * 2;
-  const gridViewportX = GRID_SIDE_MARGIN;
-  const gridViewportRight = gridViewportX + gridViewportWidth;
-
   const selectedApp =
     appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;
   const heroSplashInlineActive =
@@ -244,6 +242,14 @@ export function GridHome() {
 
   const searchLayoutActive =
     focusArea === "searchInput" && !heroSplashInlineActive;
+
+  const gridSideMarginPx = searchLayoutActive
+    ? GRID_SIDE_MARGIN_SEARCH_INPUT_PX
+    : GRID_SIDE_MARGIN_HOME_PX;
+  const gridViewportWidth = screen.width - gridSideMarginPx * 2;
+  const gridViewportX = gridSideMarginPx;
+  const gridViewportRight = gridViewportX + gridViewportWidth;
+
   const showGridTitles = settings.showAppTitles && !heroSplashInlineActive;
   const titleGapBelowIconPx =
     showGridTitles && searchLayoutActive
@@ -264,10 +270,10 @@ export function GridHome() {
   const titleStackBelowIcons = showGridTitles
     ? titleGapBelowIconPx + titleLineBelowSlackPx
     : 12;
+  const searchBarBottomY =
+    HOME_TOP_BAR_ROW_CENTER_Y + HOME_SEARCH_BAR_HEIGHT_PX / 2;
   const searchGridSafeTop =
-    HOME_TOP_BAR_ROW_CENTER_Y +
-    HOME_SEARCH_BAR_HEIGHT_PX / 2 +
-    SEARCH_LAYOUT_MARGIN_BAR_TO_ICON_ROW_PX;
+    searchBarBottomY - HOME_SEARCH_LAYOUT_ICON_ROW_OVERLAP_SEARCH_BAR_PX;
   const searchGridSafeBottom = screen.height - switchSearchKeyboardReservePx();
   const searchGridVerticalBudget = Math.max(
     140,
@@ -740,7 +746,11 @@ export function GridHome() {
 
       {!heroSplashInlineActive && (
         <DigitalClock
-          x={screen.width - GRID_SIDE_MARGIN - TOP_RIGHT_CLOCK_SCREEN_INSET_PX}
+          x={
+            screen.width -
+            TOP_RIGHT_CLOCK_SCREEN_INSET_PX -
+            HOME_DIGITAL_CLOCK_EXTRA_RIGHT_INSET_PX
+          }
           y={settingsBtnCenterY}
           fontSize={26}
         />
