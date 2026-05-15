@@ -31,6 +31,18 @@ export function useSwitchVirtualKeyboard(active: boolean) {
     setText("");
   }, []);
 
+  const deleteLastChar = useCallback(() => {
+    const vk = vkRef.current ?? getNxVirtualKeyboard();
+    if (!vk || vk.value.length === 0) return;
+    vk.value = vk.value.slice(0, -1);
+    setText(vk.value);
+    try {
+      vk.dispatchEvent(new Event("change"));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     const vk = getNxVirtualKeyboard();
     vkRef.current = vk;
@@ -66,5 +78,5 @@ export function useSwitchVirtualKeyboard(active: boolean) {
     };
   }, [active, syncFromVk]);
 
-  return { text, clear };
+  return { text, clear, deleteLastChar };
 }

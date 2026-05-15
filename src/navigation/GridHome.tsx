@@ -9,6 +9,7 @@ import { Image, Rect } from "react-tela";
 import { truncate } from "../lib/truncate";
 import { AppIcon, APP_ICON_SELECTED_FOCUS_SCALE } from "../components/AppIcon";
 import { ApplicationDetailsContent } from "../components/ApplicationDetailsContent";
+import { handleVirtualKeyboardFaceButton } from "../components/Input";
 import { Modal } from "../components/Modal";
 import { Navigation } from "../components/Navigation";
 import { SearchBar } from "../components/SearchBar";
@@ -151,8 +152,11 @@ export function GridHome() {
     [sortedApps, hiddenGameIds],
   );
 
-  const { text: searchQuery, clear: clearSearchKeyboard } =
-    useSwitchVirtualKeyboard(focusArea === "searchInput");
+  const {
+    text: searchQuery,
+    clear: clearSearchKeyboard,
+    deleteLastChar: deleteLastSearchChar,
+  } = useSwitchVirtualKeyboard(focusArea === "searchInput");
 
   const searchBarVisible = useMemo(
     () =>
@@ -472,12 +476,31 @@ export function GridHome() {
 
   const onButtonBPress = useCallback(() => {
     if (focusArea === "searchInput") {
-      if (searchQuery.trim()) clearSearchKeyboard();
-      else setFocusArea("search");
+      handleVirtualKeyboardFaceButton("B", {
+        valueLength: searchQuery.length,
+        deleteLastChar: deleteLastSearchChar,
+        onDismiss: onSearchCancel,
+      });
       return;
     }
     if (searchQuery.trim()) clearSearchKeyboard();
-  }, [focusArea, searchQuery, clearSearchKeyboard]);
+  }, [
+    focusArea,
+    searchQuery,
+    clearSearchKeyboard,
+    deleteLastSearchChar,
+    onSearchCancel,
+  ]);
+
+  const onButtonXPress = useCallback(() => {
+    if (focusArea === "searchInput") {
+      handleVirtualKeyboardFaceButton("X", {
+        valueLength: searchQuery.length,
+        deleteLastChar: deleteLastSearchChar,
+        onDismiss: onSearchCancel,
+      });
+    }
+  }, [focusArea, searchQuery, deleteLastSearchChar, onSearchCancel]);
 
   useGamepadNavigation({
     apps: appsForGrid,
@@ -509,6 +532,7 @@ export function GridHome() {
         }
       : undefined,
     onButtonBPress,
+    onButtonXPress,
     replaceBottomNavWithHeroSplash: heroSplashOnGridEnabled,
     inlineDetailsOpen: heroSplashInlineOpen,
     onOpenInlineDetails: openHeroSplashInline,

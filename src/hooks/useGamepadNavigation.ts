@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
 import { registerAppLaunch } from "../settings/lastPlayedStore";
+import { handleVirtualKeyboardFaceButton } from "../components/Input";
 
 export type GridHomeFocusArea =
   | "apps"
@@ -32,6 +33,7 @@ interface GamepadNavigationProps {
   onOpenWebBrowser?: () => void;
   onActivateSearch?: () => void;
   onButtonBPress?: () => void;
+  onButtonXPress?: () => void;
   onMinus?: () => void;
   replaceBottomNavWithHeroSplash?: boolean;
   inlineDetailsOpen?: boolean;
@@ -64,6 +66,7 @@ interface GamepadState {
   minusPressed: boolean;
   aPressed: boolean;
   bPressed: boolean;
+  xPressed: boolean;
 }
 
 interface HoldRepeatState {
@@ -140,6 +143,7 @@ export function useGamepadNavigation({
   onOpenWebBrowser,
   onActivateSearch,
   onButtonBPress,
+  onButtonXPress,
   onMinus,
   replaceBottomNavWithHeroSplash = false,
   inlineDetailsOpen = false,
@@ -163,6 +167,7 @@ export function useGamepadNavigation({
     minusPressed: false,
     aPressed: false,
     bPressed: false,
+    xPressed: false,
   });
   const holdRepeatRef = useRef<HoldRepeatState>({ left: null, right: null });
 
@@ -290,7 +295,11 @@ export function useGamepadNavigation({
       if (gamepad.buttons[Button.Plus].pressed && !gamepadState.plusPressed) {
         setGamepadState((prev) => ({ ...prev, plusPressed: true }));
         if (focusArea === "searchInput") {
-          onSearchSubmit?.();
+          handleVirtualKeyboardFaceButton("plus", {
+            valueLength: 0,
+            deleteLastChar: () => {},
+            onDismiss: () => onSearchSubmit?.(),
+          });
         } else {
           onOpenSettings?.();
         }
@@ -304,7 +313,11 @@ export function useGamepadNavigation({
       if (gamepad.buttons[Button.Minus].pressed && !gamepadState.minusPressed) {
         setGamepadState((prev) => ({ ...prev, minusPressed: true }));
         if (focusArea === "searchInput" || focusArea === "search") {
-          onSearchCancel?.();
+          handleVirtualKeyboardFaceButton("minus", {
+            valueLength: 0,
+            deleteLastChar: () => {},
+            onDismiss: () => onSearchCancel?.(),
+          });
         } else if (focusArea === "apps") {
           onMinus?.();
         }
@@ -581,6 +594,13 @@ export function useGamepadNavigation({
         setGamepadState((prev) => ({ ...prev, bPressed: false }));
       }
 
+      if (gamepad.buttons[Button.X].pressed && !gamepadState.xPressed) {
+        setGamepadState((prev) => ({ ...prev, xPressed: true }));
+        onButtonXPress?.();
+      } else if (!gamepad.buttons[Button.X].pressed && gamepadState.xPressed) {
+        setGamepadState((prev) => ({ ...prev, xPressed: false }));
+      }
+
       animationFrameId = requestAnimationFrame(handleGamepadInput);
     };
 
@@ -609,6 +629,7 @@ export function useGamepadNavigation({
     onOpenWebBrowser,
     onActivateSearch,
     onButtonBPress,
+    onButtonXPress,
     onMinus,
     replaceBottomNavWithHeroSplash,
     inlineDetailsOpen,

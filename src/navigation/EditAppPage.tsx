@@ -8,7 +8,7 @@ import React, {
 import { Button } from "@nx.js/constants";
 import { Rect, Text } from "react-tela";
 import { Button as ActionButton } from "../components/Button";
-import { Input } from "../components/Input";
+import { Input, handleVirtualKeyboardFaceButton, INPUT_VIRTUAL_KEYBOARD_FOOTER_HINT } from "../components/Input";
 import { COLORS } from "../lib/colors";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
@@ -222,7 +222,8 @@ export function EditApp({
   const editingFieldRef = useRef<RichEditorFieldKey | null>(null);
   editingFieldRef.current = editingField;
 
-  const { text: vkText } = useSwitchVirtualKeyboard(editingField !== null);
+  const { text: vkText, deleteLastChar: deleteLastVkChar } =
+    useSwitchVirtualKeyboard(editingField !== null);
 
   useEffect(() => {
     let cancelled = false;
@@ -285,6 +286,8 @@ export function EditApp({
     down: false,
     a: false,
     b: false,
+    x: false,
+    plus: false,
     minus: false,
   });
   const focusIndexRef = useRef(0);
@@ -326,10 +329,12 @@ export function EditApp({
         (Math.abs(gp.axes[1]) > 0.5 && gp.axes[1] > 0.5);
       const isA = gp.buttons[Button.A].pressed;
       const isB = gp.buttons[Button.B].pressed;
+      const isX = gp.buttons[Button.X].pressed;
+      const isPlus = gp.buttons[Button.Plus].pressed;
       const isMinus = gp.buttons[Button.Minus].pressed;
 
       if (!gamepadArmedRef.current) {
-        if (!isUp && !isDown && !isA && !isB && !isMinus) {
+        if (!isUp && !isDown && !isA && !isB && !isX && !isPlus && !isMinus) {
           gamepadArmedRef.current = true;
         }
         raf = requestAnimationFrame(loop);
@@ -337,13 +342,53 @@ export function EditApp({
       }
 
       if (editingFieldRef.current !== null) {
+        const vk = getNxVirtualKeyboard();
+        const vkLen = (vk?.value ?? vkTextRef.current).length;
+        const dispatchVkSubmit = () => {
+          const v = getNxVirtualKeyboard();
+          if (
+            v &&
+            typeof (v as EventTarget & { dispatchEvent?: (e: Event) => boolean })
+              .dispatchEvent === "function"
+          ) {
+            v.dispatchEvent(new Event("submit"));
+          }
+        };
         if (isB && !b.b) {
-          commitFieldAndStopEditing();
+          handleVirtualKeyboardFaceButton("B", {
+            valueLength: vkLen,
+            deleteLastChar: deleteLastVkChar,
+            onDismiss: commitFieldAndStopEditing,
+          });
+        }
+        if (isX && !b.x) {
+          handleVirtualKeyboardFaceButton("X", {
+            valueLength: vkLen,
+            deleteLastChar: deleteLastVkChar,
+            onDismiss: commitFieldAndStopEditing,
+          });
+        }
+        if (isMinus && !b.minus) {
+          handleVirtualKeyboardFaceButton("minus", {
+            valueLength: vkLen,
+            deleteLastChar: deleteLastVkChar,
+            onDismiss: commitFieldAndStopEditing,
+          });
+        }
+        if (isPlus && !b.plus) {
+          handleVirtualKeyboardFaceButton("plus", {
+            valueLength: vkLen,
+            deleteLastChar: deleteLastVkChar,
+            onDismiss: commitFieldAndStopEditing,
+            onSubmit: dispatchVkSubmit,
+          });
         }
         b.up = isUp;
         b.down = isDown;
         b.a = isA;
         b.b = isB;
+        b.x = isX;
+        b.plus = isPlus;
         b.minus = isMinus;
         raf = requestAnimationFrame(loop);
         return;
@@ -359,6 +404,8 @@ export function EditApp({
         b.down = isDown;
         b.a = isA;
         b.b = isB;
+        b.x = isX;
+        b.plus = isPlus;
         b.minus = isMinus;
         raf = requestAnimationFrame(loop);
         return;
@@ -391,12 +438,14 @@ export function EditApp({
       b.down = isDown;
       b.a = isA;
       b.b = isB;
+      b.x = isX;
+      b.plus = isPlus;
       b.minus = isMinus;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [commitFieldAndStopEditing, commitSave, onClose]);
+  }, [commitFieldAndStopEditing, commitSave, onClose, deleteLastVkChar]);
 
   const hoverFieldRow = useCallback((idx: number) => {
     setFocusArea("fields");
@@ -456,7 +505,7 @@ export function EditApp({
       onRightActionMouseLeave={() => setFocusArea("fields")}
       footerHint={
         editingField
-          ? "B  Done editing"
+          ? INPUT_VIRTUAL_KEYBOARD_FOOTER_HINT
           : "A  Edit field / Save      B / −  Back"
       }
     >

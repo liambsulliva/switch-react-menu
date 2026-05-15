@@ -3,6 +3,38 @@ import { Rect, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
 import { truncate } from "../lib/truncate";
 
+export type VirtualKeyboardFaceButton = "plus" | "minus" | "B" | "X";
+
+export type VirtualKeyboardFaceButtonHandlers = {
+  valueLength: number;
+  deleteLastChar: () => void;
+  onDismiss: () => void;
+  onSubmit?: () => void;
+};
+
+export function handleVirtualKeyboardFaceButton(
+  button: VirtualKeyboardFaceButton,
+  { valueLength, deleteLastChar, onDismiss, onSubmit }: VirtualKeyboardFaceButtonHandlers,
+): void {
+  switch (button) {
+    case "B":
+      if (valueLength > 0) deleteLastChar();
+      else onDismiss();
+      break;
+    case "X":
+    case "minus":
+      onDismiss();
+      break;
+    case "plus":
+      onSubmit?.();
+      onDismiss();
+      break;
+  }
+}
+
+export const INPUT_VIRTUAL_KEYBOARD_FOOTER_HINT =
+  "B  Delete   X / −  Leave   +  Submit";
+
 const GUTTER_Y = 4;
 
 export type InputProps = {
