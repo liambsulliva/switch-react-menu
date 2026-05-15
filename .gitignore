@@ -6,3 +6,4 @@
 /romfs/main.js.map
 /dist
 .DS_Store
+prod.keys
