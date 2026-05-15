@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SWITCH_VK_DELETE_BACKWARD } from "../lib/switchVirtualKeyboardEvents";
 
 type NxVirtualKeyboard = EventTarget & {
   value: string;
@@ -7,7 +8,7 @@ type NxVirtualKeyboard = EventTarget & {
   hide(): void;
 };
 
-function getNxVirtualKeyboard(): NxVirtualKeyboard | null {
+export function getNxVirtualKeyboard(): NxVirtualKeyboard | null {
   const nav = navigator as Navigator & { virtualKeyboard?: NxVirtualKeyboard };
   const vk = nav.virtualKeyboard;
   if (!vk || typeof vk.show !== "function") return null;
@@ -15,9 +16,18 @@ function getNxVirtualKeyboard(): NxVirtualKeyboard | null {
   return vk;
 }
 
-export function useSwitchVirtualKeyboard(active: boolean) {
+export type UseSwitchVirtualKeyboardOptions = {
+  onDeleteBackwardAtEmpty?: () => void;
+};
+
+export function useSwitchVirtualKeyboard(
+  active: boolean,
+  options?: UseSwitchVirtualKeyboardOptions,
+) {
   const [text, setText] = useState("");
   const vkRef = useRef<NxVirtualKeyboard | null>(null);
+  const onDeleteBackwardAtEmptyRef = useRef(options?.onDeleteBackwardAtEmpty);
+  onDeleteBackwardAtEmptyRef.current = options?.onDeleteBackwardAtEmpty;
 
   const syncFromVk = useCallback(() => {
     const vk = vkRef.current;
@@ -33,14 +43,18 @@ export function useSwitchVirtualKeyboard(active: boolean) {
 
   const deleteLastChar = useCallback(() => {
     const vk = vkRef.current ?? getNxVirtualKeyboard();
-    if (!vk || vk.value.length === 0) return;
-    vk.value = vk.value.slice(0, -1);
-    setText(vk.value);
-    try {
-      vk.dispatchEvent(new Event("change"));
-    } catch {
-      /* ignore */
+    if (!vk) return;
+    if (vk.value.length > 0) {
+      vk.value = vk.value.slice(0, -1);
+      setText(vk.value);
+      try {
+        vk.dispatchEvent(new Event("change"));
+      } catch {
+        /* ignore */
+      }
+      return;
     }
+    onDeleteBackwardAtEmptyRef.current?.();
   }, []);
 
   useEffect(() => {
@@ -60,6 +74,10 @@ export function useSwitchVirtualKeyboard(active: boolean) {
     vk.addEventListener("cursormove", onChange);
     const onSubmit = () => syncFromVk();
     vk.addEventListener("submit", onSubmit);
+    const onDeleteBackward = () => {
+      onDeleteBackwardAtEmptyRef.current?.();
+    };
+    vk.addEventListener(SWITCH_VK_DELETE_BACKWARD, onDeleteBackward);
     try {
       vk.show();
     } catch {
@@ -70,6 +88,7 @@ export function useSwitchVirtualKeyboard(active: boolean) {
       vk.removeEventListener("change", onChange);
       vk.removeEventListener("cursormove", onChange);
       vk.removeEventListener("submit", onSubmit);
+      vk.removeEventListener(SWITCH_VK_DELETE_BACKWARD, onDeleteBackward);
       try {
         vk.hide();
       } catch {

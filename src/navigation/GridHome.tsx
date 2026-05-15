@@ -39,6 +39,7 @@ import { useLaunchCountsRevision } from "../settings/launchCountsStore";
 import { sortApplicationsForMode } from "../lib/sortApplications";
 import {
   getInstalledTitlesRevision,
+  peekInstalledRichMatch,
   subscribeInstalledTitlesRevision,
 } from "../lib/richDetailsBundledCatalog";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
@@ -51,12 +52,20 @@ import {
 import { HeroSplash } from "./HeroSplashPage";
 import { EditApp } from "./EditAppPage";
 import { useHeroSplashInlineExperience } from "../hooks/useHeroSplashInlineExperience";
-import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
+import {
+  getNxVirtualKeyboard,
+  useSwitchVirtualKeyboard,
+} from "../hooks/useSwitchVirtualKeyboard";
 import { easeOutDetailEntrance } from "../lib/easing";
 import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
 import { openSwitchWebApplet } from "../lib/switchWebApplet";
 import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
 import { filterAppsBySearchQuery } from "../lib/filterAppsBySearchQuery";
+import {
+  buildSearchTagCatalog,
+  getHashTagCompletionSuffix,
+  peelTrailingCommittedHashTags,
+} from "../lib/searchTagQuery";
 
 const GRID_GAP = 48;
 const GRID_ICON_SIZE = 256;
@@ -98,6 +107,7 @@ export function GridHome() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [focusArea, setFocusArea] = useState<GridHomeFocusArea>("apps");
   const [selectedNavButton, setSelectedNavButton] = useState(0);
+  const [searchCommittedTags, setSearchCommittedTags] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showAlbum, setShowAlbum] = useState(false);
   const [showCustomSort, setShowCustomSort] = useState(false);
@@ -152,23 +162,64 @@ export function GridHome() {
     [sortedApps, hiddenGameIds],
   );
 
+  const popLastCommittedSearchTag = useCallback(() => {
+    setSearchCommittedTags((prev) =>
+      prev.length > 0 ? prev.slice(0, -1) : prev,
+    );
+  }, []);
+
   const {
     text: searchQuery,
-    clear: clearSearchKeyboard,
+    clear: clearSearchKeyboardVk,
     deleteLastChar: deleteLastSearchChar,
-  } = useSwitchVirtualKeyboard(focusArea === "searchInput");
+  } = useSwitchVirtualKeyboard(focusArea === "searchInput", {
+    onDeleteBackwardAtEmpty: popLastCommittedSearchTag,
+  });
+
+  const clearSearchKeyboard = useCallback(() => {
+    clearSearchKeyboardVk();
+    setSearchCommittedTags([]);
+  }, [clearSearchKeyboardVk]);
+
+  const searchTagCatalog = useMemo(
+    () => buildSearchTagCatalog(apps, peekInstalledRichMatch),
+    [apps, installedTitlesRevision],
+  );
+
+  const searchTagCompletionSuffix = useMemo(
+    () => getHashTagCompletionSuffix(searchQuery, searchTagCatalog),
+    [searchQuery, searchTagCatalog],
+  );
+
+  useEffect(() => {
+    if (focusArea !== "searchInput") return;
+    const peel = peelTrailingCommittedHashTags(
+      searchQuery,
+      searchTagCatalog.lowerToCanonical,
+    );
+    if (peel.appendedTags.length === 0) return;
+    setSearchCommittedTags((prev) => [...prev, ...peel.appendedTags]);
+    const vk = getNxVirtualKeyboard();
+    if (vk && vk.value !== peel.draft) {
+      vk.value = peel.draft;
+    }
+  }, [focusArea, searchQuery, searchTagCatalog]);
+
+  const searchVkFooterValueLength =
+    searchQuery.length > 0 || searchCommittedTags.length > 0 ? 1 : 0;
 
   const searchBarVisible = useMemo(
     () =>
       focusArea === "search" ||
       focusArea === "searchInput" ||
-      searchQuery.trim().length > 0,
-    [focusArea, searchQuery],
+      searchQuery.trim().length > 0 ||
+      searchCommittedTags.length > 0,
+    [focusArea, searchQuery, searchCommittedTags],
   );
 
   const appsForGrid = useMemo(
-    () => filterAppsBySearchQuery(apps, searchQuery),
-    [apps, searchQuery, installedTitlesRevision],
+    () => filterAppsBySearchQuery(apps, searchQuery, searchCommittedTags),
+    [apps, searchQuery, searchCommittedTags, installedTitlesRevision],
   );
 
   const appCount = appsForGrid.length;
@@ -219,15 +270,15 @@ export function GridHome() {
   );
   const searchIconSlotByQuarterScreen = Math.floor(screen.height / 4);
   const gridIconSlotSize = searchLayoutActive
-    ? Math.max(
-        128,
-        Math.min(GRID_ICON_SIZE, searchIconSlotByQuarterScreen),
-      )
+    ? Math.max(128, Math.min(GRID_ICON_SIZE, searchIconSlotByQuarterScreen))
     : GRID_ICON_SIZE;
 
   const jumpStep = useMemo(
     () =>
-      Math.max(1, Math.floor(gridViewportWidth / (gridIconSlotSize + GRID_GAP))),
+      Math.max(
+        1,
+        Math.floor(gridViewportWidth / (gridIconSlotSize + GRID_GAP)),
+      ),
     [gridViewportWidth, gridIconSlotSize],
   );
 
@@ -477,16 +528,20 @@ export function GridHome() {
   const onButtonBPress = useCallback(() => {
     if (focusArea === "searchInput") {
       handleVirtualKeyboardFaceButton("B", {
-        valueLength: searchQuery.length,
+        valueLength: searchVkFooterValueLength,
         deleteLastChar: deleteLastSearchChar,
         onDismiss: onSearchCancel,
       });
       return;
     }
-    if (searchQuery.trim()) clearSearchKeyboard();
+    if (searchQuery.trim() || searchCommittedTags.length > 0) {
+      clearSearchKeyboard();
+    }
   }, [
     focusArea,
     searchQuery,
+    searchCommittedTags.length,
+    searchVkFooterValueLength,
     clearSearchKeyboard,
     deleteLastSearchChar,
     onSearchCancel,
@@ -495,12 +550,17 @@ export function GridHome() {
   const onButtonXPress = useCallback(() => {
     if (focusArea === "searchInput") {
       handleVirtualKeyboardFaceButton("X", {
-        valueLength: searchQuery.length,
+        valueLength: searchVkFooterValueLength,
         deleteLastChar: deleteLastSearchChar,
         onDismiss: onSearchCancel,
       });
     }
-  }, [focusArea, searchQuery, deleteLastSearchChar, onSearchCancel]);
+  }, [
+    focusArea,
+    searchVkFooterValueLength,
+    deleteLastSearchChar,
+    onSearchCancel,
+  ]);
 
   useGamepadNavigation({
     apps: appsForGrid,
@@ -700,6 +760,8 @@ export function GridHome() {
           width={searchBarWidth}
           height={searchBarHeight}
           query={searchQuery}
+          committedTags={searchCommittedTags}
+          tagCompletionSuffix={searchTagCompletionSuffix}
           visible
           inputFocused={focusArea === "searchInput"}
           fontSize={

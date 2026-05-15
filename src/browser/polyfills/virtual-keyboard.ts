@@ -1,3 +1,5 @@
+import { SWITCH_VK_DELETE_BACKWARD } from "../../lib/switchVirtualKeyboardEvents";
+
 type NxStyleVirtualKeyboard = EventTarget & {
   value: string;
   cursorIndex: number;
@@ -5,9 +7,7 @@ type NxStyleVirtualKeyboard = EventTarget & {
   hide(): void;
 };
 
-function navigatorHasNxStyleVk(
-  vk: unknown,
-): vk is NxStyleVirtualKeyboard {
+function navigatorHasNxStyleVk(vk: unknown): vk is NxStyleVirtualKeyboard {
   if (!vk || typeof vk !== "object") return false;
   const o = vk as Record<string, unknown>;
   return (
@@ -61,6 +61,11 @@ class BrowserVirtualKeyboardStub extends EventTarget {
         if (e.key === "Enter") {
           e.preventDefault();
           this.dispatchEvent(new Event("submit"));
+          return;
+        }
+        if (e.key === "Backspace" && el.value.length === 0) {
+          e.preventDefault();
+          this.dispatchEvent(new Event(SWITCH_VK_DELETE_BACKWARD));
         }
       });
       document.body.appendChild(el);
