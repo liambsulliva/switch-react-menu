@@ -1,4 +1,4 @@
-import { peekInstalledRichMatch } from "./richDetailsBundledCatalog";
+import { peekInstalledRichMatch } from "./richDetailsStore";
 import { getLaunchCount } from "../settings/launchCountsStore";
 import type { SortingMode } from "../settings/settingsStore";
 

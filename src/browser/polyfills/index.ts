@@ -5,6 +5,7 @@ import { installSwitchPolyfill } from "./switch";
 import { installBrowserVirtualKeyboardStub } from "./virtual-keyboard";
 import { installKeyboardGamepadPolyfill } from "./keyboard-gamepad";
 import { installMouseToTouchPolyfill } from "./mouse-touch";
+import { installRawgFetchPolyfill } from "./rawg";
 
 // Order matters here! Installs screen first (so `screen` is available when other
 // polyfills or the app touch it), then fonts, then Switch (which is async
@@ -14,6 +15,7 @@ export async function installNxJsPolyfills(
 ): Promise<void> {
   installScreenPolyfill(canvas);
   installFontsPolyfill();
+  installRawgFetchPolyfill();
   await installSwitchPolyfill();
   installBrowserVirtualKeyboardStub();
   installKeyboardGamepadPolyfill();

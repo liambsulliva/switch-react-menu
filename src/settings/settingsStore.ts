@@ -42,7 +42,7 @@ export function sortingModeLabel(mode: SortingMode): string {
   }
 }
 
-// Release-date order uses the IGDB catalog; only valid while rich details are on.
+// Release-date order uses RAWG metadata; only valid while rich details are on.
 export function normalizeSortingModeForRichDetails(
   sortingMode: SortingMode,
   disableRichDetails: boolean,
@@ -132,16 +132,13 @@ function loadSettings(): AppSettings {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<
         AppSettings & {
-          igdbInlineGridDetails?: boolean;
           alphabeticalSort?: boolean;
           customSort?: boolean;
           showPageNumbers?: boolean;
         }
       >;
-      const heroSplashInlineGrid =
-        parsed.heroSplashInlineGrid ?? parsed.igdbInlineGridDetails ?? false;
+      const heroSplashInlineGrid = parsed.heroSplashInlineGrid ?? false;
       const {
-        igdbInlineGridDetails: _legacyIgdb,
         alphabeticalSort: legacyAlphabetical,
         customSort: _legacyCustomSort,
         sortingMode: parsedMode,

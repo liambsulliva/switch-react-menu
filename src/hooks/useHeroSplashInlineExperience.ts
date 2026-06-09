@@ -4,7 +4,7 @@ import {
   getInstalledRichMatch,
   getInstalledTitlesRevision,
   subscribeInstalledTitlesRevision,
-} from "../lib/richDetailsBundledCatalog";
+} from "../lib/richDetailsStore";
 
 export type HeroSplashInlineFetchState =
   | { status: "idle" }
@@ -39,9 +39,9 @@ export function useHeroSplashInlineExperience(
 
     void (async () => {
       try {
-        const bundled = await getInstalledRichMatch(app);
+        const details = await getInstalledRichMatch(app);
         if (ac.signal.aborted) return;
-        setFetchState({ status: "ok", data: bundled });
+        setFetchState({ status: "ok", data: details });
       } catch (err: unknown) {
         if (ac.signal.aborted) return;
         const message = err instanceof Error ? err.message : "Request failed";

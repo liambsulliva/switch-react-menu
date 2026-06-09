@@ -15,9 +15,10 @@ import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
 import type { RichGameDetails, RichTrailer } from "../lib/richGameDetails";
 import {
   getInstalledRichMatch,
-  persistRichCatalogAfterBootstrap,
+  markInstalledRichMatchManual,
+  persistRichDetailsAfterBootstrap,
   setInstalledRichMatch,
-} from "../lib/richDetailsBundledCatalog";
+} from "../lib/richDetailsStore";
 
 type NxVirtualKeyboard = EventTarget & {
   value: string;
@@ -275,8 +276,10 @@ export function EditApp({
       setEditingField(null);
     }
     const details = formToDetails(f, app);
-    setInstalledRichMatch(app.id.toString(), details);
-    await persistRichCatalogAfterBootstrap(installedAppsForPersistence);
+    const appId = app.id.toString();
+    markInstalledRichMatchManual(appId);
+    setInstalledRichMatch(appId, details);
+    await persistRichDetailsAfterBootstrap(installedAppsForPersistence);
     onClose();
   }, [app, installedAppsForPersistence, onClose]);
 

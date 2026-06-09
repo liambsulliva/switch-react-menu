@@ -25,7 +25,8 @@ import type { ListElementModel } from "../components/ListElement";
 interface SettingsMenuProps {
   onClose: () => void;
   onCustomSort?: () => void;
-  onRefreshRichCatalog?: () => void;
+  onEditRawgApiKey?: () => void;
+  onRefreshRichDetails?: () => void;
 }
 
 type SettingsFocusArea = "list" | "back";
@@ -56,7 +57,8 @@ const HOLD_REPEAT_INTERVAL_MS = 110;
 
 type SettingsActionHandlers = {
   onCustomSort?: () => void;
-  onRefreshRichCatalog?: () => void;
+  onEditRawgApiKey?: () => void;
+  onRefreshRichDetails?: () => void;
 };
 
 type SettingRowConfig = {
@@ -134,11 +136,18 @@ const SETTING_ROWS: SettingRowConfig[] = [
     variant: "knob",
   },
   {
-    id: "refreshRichCatalog",
-    label: "Rebuild local game database",
+    id: "rawgApiKey",
+    label: "RAWG API Key",
     variant: "action",
     isDisabled: (s) => s.disableRichDetails,
-    onSelect: ({ onRefreshRichCatalog }) => onRefreshRichCatalog?.(),
+    onSelect: ({ onEditRawgApiKey }) => onEditRawgApiKey?.(),
+  },
+  {
+    id: "refreshRichDetails",
+    label: "Refresh RAWG game details",
+    variant: "action",
+    isDisabled: (s) => s.disableRichDetails,
+    onSelect: ({ onRefreshRichDetails }) => onRefreshRichDetails?.(),
   },
 ];
 
@@ -151,7 +160,8 @@ function ensureVisible(index: number, offset: number): number {
 export function SettingsMenu({
   onClose,
   onCustomSort,
-  onRefreshRichCatalog,
+  onEditRawgApiKey,
+  onRefreshRichDetails,
 }: SettingsMenuProps) {
   const settings = useSettings();
   const listElements = useMemo<ListElementModel[]>(
@@ -170,11 +180,12 @@ export function SettingsMenu({
           }
           row.onSelect?.({
             onCustomSort,
-            onRefreshRichCatalog,
+            onEditRawgApiKey,
+            onRefreshRichDetails,
           });
         },
       })),
-    [settings, onCustomSort, onRefreshRichCatalog],
+    [settings, onCustomSort, onEditRawgApiKey, onRefreshRichDetails],
   );
   const selectableIndexes = useMemo(
     () =>

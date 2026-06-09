@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { resetRichDetailsSessionForHardReload } from "./richDetailsBundledCatalog";
-import { clearRichPersistentCache } from "./richDetailsPersistentCache";
+import { resetRichDetailsSessionForHardReload } from "./richDetailsStore";
 
 let hardReloadNonce = 0;
 const listeners = new Set<() => void>();
@@ -11,9 +10,8 @@ function emit() {
   }
 }
 
-export function requestRichDetailsCatalogHardReload(): void {
-  clearRichPersistentCache();
-  resetRichDetailsSessionForHardReload();
+export function requestRichDetailsHardReload(): void {
+  resetRichDetailsSessionForHardReload({ preserveManual: true });
   hardReloadNonce += 1;
   emit();
 }

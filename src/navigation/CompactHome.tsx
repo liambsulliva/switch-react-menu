@@ -28,9 +28,9 @@ import { sortApplicationsForMode } from "../lib/sortApplications";
 import {
   getInstalledTitlesRevision,
   subscribeInstalledTitlesRevision,
-} from "../lib/richDetailsBundledCatalog";
+} from "../lib/richDetailsStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
-import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
+import { requestRichDetailsHardReload } from "../lib/richDetailsHardReloadStore";
 
 const ROW_HEIGHT = 84;
 const listHeight =
@@ -76,7 +76,15 @@ function ensureVisible(index: number, offset: number): number {
   return offset;
 }
 
-export function CompactHome() {
+type CompactHomeProps = {
+  bootstrapError?: string | null;
+  onEditRawgApiKey?: () => void;
+};
+
+export function CompactHome({
+  bootstrapError: _bootstrapError = null,
+  onEditRawgApiKey,
+}: CompactHomeProps = {}) {
   const settings = useSettings();
   const customOrder = useCustomOrder();
   const installedTitlesRevision = useSyncExternalStore(
@@ -114,9 +122,9 @@ export function CompactHome() {
     setApps(loaded);
   }, []);
 
-  const handleRefreshRichCatalog = useCallback(() => {
+  const handleRefreshRichDetails = useCallback(() => {
     setShowSettings(false);
-    requestRichDetailsCatalogHardReload();
+    requestRichDetailsHardReload();
   }, []);
 
   useEffect(() => {
@@ -389,7 +397,11 @@ export function CompactHome() {
           setShowSettings(false);
           setShowCustomSort(true);
         }}
-        onRefreshRichCatalog={handleRefreshRichCatalog}
+        onEditRawgApiKey={() => {
+          setShowSettings(false);
+          onEditRawgApiKey?.();
+        }}
+        onRefreshRichDetails={handleRefreshRichDetails}
       />
     );
   }

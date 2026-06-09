@@ -1,4 +1,4 @@
-import { peekInstalledRichMatch } from "./richDetailsBundledCatalog";
+import { peekInstalledRichMatch } from "./richDetailsStore";
 
 function normalizeQuery(q: string): string {
   return q.trim().toLowerCase();

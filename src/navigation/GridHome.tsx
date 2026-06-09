@@ -42,7 +42,7 @@ import {
   getInstalledTitlesRevision,
   peekInstalledRichMatch,
   subscribeInstalledTitlesRevision,
-} from "../lib/richDetailsBundledCatalog";
+} from "../lib/richDetailsStore";
 import { useHiddenGameIdSet } from "../settings/hiddenGamesStore";
 import { COLORS } from "../lib/colors";
 import {
@@ -58,7 +58,7 @@ import {
   useSwitchVirtualKeyboard,
 } from "../hooks/useSwitchVirtualKeyboard";
 import { easeOutDetailEntrance } from "../lib/easing";
-import { requestRichDetailsCatalogHardReload } from "../lib/richDetailsHardReloadStore";
+import { requestRichDetailsHardReload } from "../lib/richDetailsHardReloadStore";
 import { openSwitchWebApplet } from "../lib/switchWebApplet";
 import { richTrailerWatchUrl } from "../lib/richTrailerUrl";
 import { filterAppsBySearchQuery } from "../lib/filterAppsBySearchQuery";
@@ -96,7 +96,15 @@ const switchSearchKeyboardReservePx = () =>
     Math.floor(screen.height * 0.55),
   );
 
-export function GridHome() {
+type GridHomeProps = {
+  bootstrapError?: string | null;
+  onEditRawgApiKey?: () => void;
+};
+
+export function GridHome({
+  bootstrapError: _bootstrapError = null,
+  onEditRawgApiKey,
+}: GridHomeProps = {}) {
   const settings = useSettings();
   const customOrder = useCustomOrder();
   const installedTitlesRevision = useSyncExternalStore(
@@ -293,9 +301,9 @@ export function GridHome() {
     [gridViewportWidth, gridIconSlotSize],
   );
 
-  const handleRefreshRichCatalog = useCallback(() => {
+  const handleRefreshRichDetails = useCallback(() => {
     setShowSettings(false);
-    requestRichDetailsCatalogHardReload();
+    requestRichDetailsHardReload();
   }, []);
 
   useEffect(() => {
@@ -663,7 +671,11 @@ export function GridHome() {
           setShowSettings(false);
           setShowCustomSort(true);
         }}
-        onRefreshRichCatalog={handleRefreshRichCatalog}
+        onEditRawgApiKey={() => {
+          setShowSettings(false);
+          onEditRawgApiKey?.();
+        }}
+        onRefreshRichDetails={handleRefreshRichDetails}
       />
     );
   }

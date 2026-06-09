@@ -2,17 +2,21 @@ import React from "react";
 import { Rect, Text } from "react-tela";
 import { COLORS } from "../lib/colors";
 
-export type RichCatalogLoadingOverlayProps = {
+export type RichDetailsLoadingOverlayProps = {
   progress: number;
+  message?: string;
+  error?: string | null;
 };
 
 const BAR_W = 560;
 const BAR_H = 10;
 const BAR_RADIUS = 5;
 
-export function RichCatalogLoadingOverlay({
+export function RichDetailsLoadingOverlay({
   progress,
-}: RichCatalogLoadingOverlayProps) {
+  message = "Loading…",
+  error = null,
+}: RichDetailsLoadingOverlayProps) {
   const p = Math.max(0, Math.min(1, progress));
   const cx = screen.width / 2;
   const cy = screen.height / 2;
@@ -37,8 +41,21 @@ export function RichCatalogLoadingOverlay({
         textAlign="center"
         textBaseline="middle"
       >
-        Loading…
+        {message}
       </Text>
+      {error ? (
+        <Text
+          x={cx}
+          y={cy + 42}
+          fill={COLORS.gray[400]}
+          fontSize={16}
+          fontFamily="SourceSansPro-Regular"
+          textAlign="center"
+          textBaseline="middle"
+        >
+          {error}
+        </Text>
+      ) : null}
       <Rect
         x={barLeft}
         y={cy - BAR_H / 2}

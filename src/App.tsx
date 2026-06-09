@@ -5,26 +5,33 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { RichCatalogLoadingOverlay } from "./components/Loader";
+import { RichDetailsLoadingOverlay } from "./components/Loader";
 import {
   applyRichHydrationFromDisk,
   bumpInstalledTitlesRevision,
   ensureIconHeroRgbPairsReady,
   getInstalledAppSignature,
   initializeRichDetailsForInstalledApps,
-  persistRichCatalogAfterBootstrap,
-} from "./lib/richDetailsBundledCatalog";
+  persistRichDetailsAfterBootstrap,
+} from "./lib/richDetailsStore";
 import { useRichDetailsHardReloadNonce } from "./lib/richDetailsHardReloadStore";
+import { RawgApiError } from "./lib/rawgApiClient";
 import { loadRichPersistentPayload } from "./lib/richDetailsPersistentCache";
 import { CompactHome } from "./navigation/CompactHome";
 import { GridHome } from "./navigation/GridHome";
+import { RawgApiKeyGate } from "./navigation/RawgApiKeyGate";
+import { hasRawgApiKey, useRawgApiKey } from "./settings/rawgApiKeyStore";
 import { useSettings } from "./settings/settingsStore";
 
 export function App() {
   const settings = useSettings();
+  const rawgApiKey = useRawgApiKey();
   const hardReloadNonce = useRichDetailsHardReloadNonce();
-  const [richCatalogReady, setRichCatalogReady] = useState(false);
-  const [richCatalogLoadProgress, setRichCatalogLoadProgress] = useState(0);
+  const [richDetailsReady, setRichDetailsReady] = useState(false);
+  const [richDetailsLoadProgress, setRichDetailsLoadProgress] = useState(0);
+  const [loadMessage, setLoadMessage] = useState("Loading…");
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [showRawgKeySettings, setShowRawgKeySettings] = useState(false);
   const targetProgressRef = useRef(0);
   const displayProgressRef = useRef(0);
   const lastTargetMsRef = useRef(
@@ -33,6 +40,9 @@ export function App() {
   const lastPaintedProgressRef = useRef(0);
   const prevHardReloadNonce = useRef<number | null>(null);
   const bootstrapGen = useRef(0);
+
+  const richDetailsEnabled = !settings.disableRichDetails;
+  const needsRawgKey = richDetailsEnabled && !hasRawgApiKey();
 
   const resetProgressRefs = useCallback(() => {
     const now =
@@ -56,31 +66,36 @@ export function App() {
     targetProgressRef.current = 1;
     displayProgressRef.current = 1;
     lastPaintedProgressRef.current = 1;
-    setRichCatalogLoadProgress(1);
-    setRichCatalogReady(true);
+    setRichDetailsLoadProgress(1);
+    setRichDetailsReady(true);
+    setBootstrapError(null);
   }, []);
 
   useLayoutEffect(() => {
     resetProgressRefs();
-    setRichCatalogReady(false);
-    setRichCatalogLoadProgress(0);
-  }, [resetProgressRefs, settings.disableRichDetails]);
+    setRichDetailsReady(false);
+    setRichDetailsLoadProgress(0);
+    setBootstrapError(null);
+    setLoadMessage("Loading…");
+  }, [resetProgressRefs, settings.disableRichDetails, rawgApiKey]);
 
   useLayoutEffect(() => {
     if (
-      !settings.disableRichDetails &&
+      richDetailsEnabled &&
       prevHardReloadNonce.current !== null &&
       hardReloadNonce > prevHardReloadNonce.current
     ) {
       resetProgressRefs();
-      setRichCatalogReady(false);
-      setRichCatalogLoadProgress(0);
+      setRichDetailsReady(false);
+      setRichDetailsLoadProgress(0);
+      setBootstrapError(null);
+      setLoadMessage("Refreshing RAWG game details…");
     }
     prevHardReloadNonce.current = hardReloadNonce;
-  }, [hardReloadNonce, resetProgressRefs, settings.disableRichDetails]);
+  }, [hardReloadNonce, resetProgressRefs, richDetailsEnabled]);
 
   useEffect(() => {
-    if (richCatalogReady) return undefined;
+    if (richDetailsReady) return undefined;
     let raf = 0;
     const nowMs = () =>
       typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -111,7 +126,7 @@ export function App() {
       const lastP = lastPaintedProgressRef.current;
       if (Math.abs(d - lastP) >= 0.0035 || (d >= 0.99 && lastP < 0.99)) {
         lastPaintedProgressRef.current = d;
-        setRichCatalogLoadProgress(d);
+        setRichDetailsLoadProgress(d);
       }
 
       raf = requestAnimationFrame(tick);
@@ -121,9 +136,11 @@ export function App() {
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [richCatalogReady]);
+  }, [richDetailsReady]);
 
   useEffect(() => {
+    if (needsRawgKey || showRawgKeySettings) return undefined;
+
     const gen = ++bootstrapGen.current;
     resetProgressRefs();
     let alive = true;
@@ -135,7 +152,7 @@ export function App() {
     const frame = requestAnimationFrame(() => {
       queueMicrotask(async () => {
         try {
-          if (settings.disableRichDetails) {
+          if (!richDetailsEnabled) {
             await ensureIconHeroRgbPairsReady(installedApps, {
               hardReloadNonce,
               installedSignature: sig,
@@ -147,6 +164,7 @@ export function App() {
 
           if (hardReloadNonce === 0) {
             scheduleProgress(0.045);
+            setLoadMessage("Loading cached game details…");
             const payload = await loadRichPersistentPayload(sig);
             if (!alive || bootstrapGen.current !== gen) return;
             if (payload) {
@@ -163,23 +181,32 @@ export function App() {
 
           if (!alive || bootstrapGen.current !== gen) return;
           resetProgressRefs();
-          setRichCatalogReady(false);
-          setRichCatalogLoadProgress(0);
+          setRichDetailsReady(false);
+          setRichDetailsLoadProgress(0);
+          setLoadMessage("Fetching RAWG game details…");
 
           await initializeRichDetailsForInstalledApps(installedApps, {
             onProgress: scheduleProgress,
-            reuseCatalog: false,
             forceRefresh: hardReloadNonce > 0,
           });
           if (!alive || bootstrapGen.current !== gen) return;
 
-          await persistRichCatalogAfterBootstrap(installedApps);
+          await persistRichDetailsAfterBootstrap(installedApps);
           if (!alive || bootstrapGen.current !== gen) return;
 
           bumpInstalledTitlesRevision();
           finishBootstrapProgress();
-        } catch {
+        } catch (err) {
           if (!alive || bootstrapGen.current !== gen) return;
+          if (err instanceof RawgApiError && err.status === 401) {
+            setBootstrapError(
+              "RAWG API key was rejected. Update your key in Settings.",
+            );
+          } else if (err instanceof Error) {
+            setBootstrapError(err.message);
+          } else {
+            setBootstrapError("Failed to load game details.");
+          }
           finishBootstrapProgress();
         }
       });
@@ -192,18 +219,73 @@ export function App() {
   }, [
     finishBootstrapProgress,
     hardReloadNonce,
+    needsRawgKey,
     resetProgressRefs,
+    richDetailsEnabled,
     scheduleProgress,
-    settings.disableRichDetails,
+    showRawgKeySettings,
   ]);
 
-  if (!richCatalogReady) {
-    return <RichCatalogLoadingOverlay progress={richCatalogLoadProgress} />;
+  const handleOpenRawgApiKeySettings = useCallback(() => {
+    setShowRawgKeySettings(true);
+    setRichDetailsReady(false);
+    resetProgressRefs();
+    setRichDetailsLoadProgress(0);
+  }, [resetProgressRefs]);
+
+  const handleRawgKeyGateComplete = useCallback(() => {
+    setShowRawgKeySettings(false);
+    if (needsRawgKey) {
+      resetProgressRefs();
+      setRichDetailsReady(false);
+      setRichDetailsLoadProgress(0);
+      setBootstrapError(null);
+      setLoadMessage("Fetching RAWG game details…");
+    }
+  }, [needsRawgKey, resetProgressRefs]);
+
+  if (showRawgKeySettings || needsRawgKey) {
+    return (
+      <RawgApiKeyGate
+        mode={needsRawgKey ? "required" : "settings"}
+        onComplete={handleRawgKeyGateComplete}
+        onCancel={
+          showRawgKeySettings && !needsRawgKey
+            ? () => {
+                setShowRawgKeySettings(false);
+                if (!richDetailsReady) {
+                  finishBootstrapProgress();
+                }
+              }
+            : undefined
+        }
+      />
+    );
+  }
+
+  if (!richDetailsReady) {
+    return (
+      <RichDetailsLoadingOverlay
+        progress={richDetailsLoadProgress}
+        message={loadMessage}
+        error={bootstrapError}
+      />
+    );
   }
 
   if (settings.compactView) {
-    return <CompactHome />;
+    return (
+      <CompactHome
+        bootstrapError={bootstrapError}
+        onEditRawgApiKey={handleOpenRawgKeySettings}
+      />
+    );
   }
 
-  return <GridHome />;
+  return (
+    <GridHome
+      bootstrapError={bootstrapError}
+      onEditRawgApiKey={handleOpenRawgKeySettings}
+    />
+  );
 }

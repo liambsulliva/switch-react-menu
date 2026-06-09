@@ -17,12 +17,13 @@ A minimalist home menu for the Nintendo Switch, built with React. This project r
 - Top-bar shortcuts for search, web browser, photo album, and settings
 - Full-text **search** with `#tag` filtering, committed tag badges, and autocomplete from installed-game metadata
 - Native Switch **virtual keyboard** integration for search and metadata editing (icons reflow above the keyboard while typing)
-- **Rich game details** powered by a bundled IGDB catalog: summaries, release dates, tags, cover/background art, and YouTube trailers
-- Locally cached rich-metadata and icon-derived gradient colors, with a manual **Rebuild local game database** action in settings
+- **Rich game details** powered by the [RAWG Video Games Database API](https://api.rawg.io/docs/#tag/games): summaries, release dates, tags, cover/background art, and trailers
+- On-device metadata loading for every installed title via nx.js `fetch()`, with per-title local caching and a **Refresh RAWG game details** action in settings
+- Required **RAWG API key** entry on first launch (stored on-device; editable from Settings)
 - **Hero detail panel** on the rich-details grid (expand with **Down** on a highlighted title): icon-tinted gradient backdrop, tag badges, trailer cards, and Play / Edit Info actions
-- Per-title **metadata editor** for overriding catalog entries (title, release date, tags, summary, art URLs, trailers)
-- **Settings menu** with toggles and actions for sorting, layout, and catalog behavior
-- **Disable Rich Details** falls back to classic mode: compact list toggle, pagination style control, plain application-details modal on **−**, and no IGDB-backed metadata
+- Per-title **metadata editor** for overriding RAWG metadata (title, release date, tags, summary, art URLs, trailers)
+- **Settings menu** with toggles and actions for sorting, layout, and rich-details behavior
+- **Disable Rich Details** falls back to classic mode: compact list toggle, pagination style control, plain application-details modal on **−**, and no RAWG-backed metadata
 - **Sorting modes**: Recently Played (stock), Alphabetical, Release Date, Times Opened, and Custom
 - **Custom sort mode** with drag-to-reorder (hold **A**), hide/unhide titles (**X**), save (**+**), and cancel (**B** / **−**)
 - **Last played** tracking with an optional “Last Played!” eyebrow on the most recent title
@@ -78,12 +79,11 @@ A minimalist home menu for the Nintendo Switch, built with React. This project r
   - `/components` - Shared React components (`AppIcon`, `Navigation`, `SearchBar`, `List`, `Modal`, `Button`, `Badge`, etc.)
   - `/hooks` - Custom React hooks (`useGamepadNavigation`, `useSwitchVirtualKeyboard`, `useHeroSplashInlineExperience`)
   - `/layouts` - Reusable screen chrome (`HeaderLayout`)
-  - `/lib` - Utilities (sorting, search, rich-details catalog/cache, icon gradients, colors, web applet helpers)
+  - `/lib` - Utilities (sorting, search, rich-details store/cache, icon gradients, colors, web applet helpers)
   - `/navigation` - Full-screen views (`GridHome`, `CompactHome`, `SettingsMenu`, `AlbumPage`, `HeroSplashPage`, `EditAppPage`, `CustomSortMode`)
   - `/settings` - Persistent settings and stores (sort order, hidden games, launch counts, last played)
   - `/types` - TypeScript type definitions
-- `/public` - Static assets shipped in `romfs/` (includes `igdb-games-catalog.json`)
-- `/scripts` - Node scripts (`fetch-igdb-games.mjs` for regenerating the IGDB catalog)
+- `/public` - Static assets shipped in `romfs/` (fonts, icons)
 
 ## Building From Source (for Switch)
 
@@ -108,15 +108,11 @@ npm run nsp # Creates NSP file
 
 4. Run the application on the Switch through your preferred Homebrew Launcher!
 
-### Regenerating the IGDB catalog (optional)
+### RAWG API key (required for rich details)
 
-The rich-details experience reads `public/igdb-games-catalog.json`, which is copied into `romfs/` during `build:switch`. To refresh it from IGDB, add Twitch/IGDB credentials to `.env` and run:
+Rich details are fetched on-device from RAWG when the app starts. On first launch you will be prompted to enter a free API key from [rawg.io/apidocs](https://rawg.io/apidocs). The key is stored in local save data and can be updated or cleared from **Settings → RAWG API Key**.
 
-```bash
-npm run catalog:populate
-```
-
-Required variables: `VITE_IGDB_CLIENT_ID` and `VITE_IGDB_CLIENT_SECRET` (or the `IGDB_*` equivalents). On startup the app matches catalog entries to installed titles, caches hydrated metadata locally, and only re-fetches the bundled JSON when you trigger **Rebuild local game database** in settings.
+After the first successful fetch, metadata is cached locally so later launches can resume offline. Use **Settings → Refresh RAWG game details** to re-fetch non-manual entries from RAWG. Per-title edits made in **Edit Info** are preserved across refreshes.
 
 ## Building/Testing in the Browser (DOM)
 
@@ -138,6 +134,7 @@ npm run preview         # build + preview the static bundle
   | `screen.ts` | `globalThis.screen` | Points at the real `<canvas>`; `screen.width`/`screen.height` return the buffer size. |
   | `fonts.ts` | `globalThis.fonts` | Aliases `document.fonts` so `fonts.add(new FontFace(...))` works. |
   | `switch.ts` | `globalThis.Switch` | Implements `Switch.readFile` (via `fetch`), `Switch.Application`, album APIs, and `Switch.WebApplet`. |
+  | `rawg.ts` | `globalThis.fetch` (RAWG only) | Returns mock RAWG responses for browser preview using the mock app list. |
   | `virtual-keyboard.ts` | `navigator.virtualKeyboard` | Hidden DOM `<input>` stub so search and the metadata editor can use the same keyboard hooks as on-device. |
   | `keyboard-gamepad.ts` | `navigator.getGamepads` | Synthesizes a `Gamepad` whose buttons/axes are driven by the keyboard, using the same `Button` enum from `@nx.js/constants`. |
   | `mouse-touch.ts` | the `<canvas>` listener | Turns clicks into `touchstart`/`touchend` events so on-screen tap targets respond to mouse input. |
