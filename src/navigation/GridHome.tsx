@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -182,14 +183,17 @@ export function GridHome({
       prev.length > 0 ? prev.slice(0, -1) : prev,
     );
   }, []);
+  const searchQueryRef = useRef("");
 
   const {
     text: searchQuery,
     clear: clearSearchKeyboardVk,
     deleteLastChar: deleteLastSearchChar,
   } = useSwitchVirtualKeyboard(focusArea === "searchInput", {
+    initialValue: () => searchQueryRef.current,
     onDeleteBackwardAtEmpty: popLastCommittedSearchTag,
   });
+  searchQueryRef.current = searchQuery;
 
   const clearSearchKeyboard = useCallback(() => {
     clearSearchKeyboardVk();
@@ -531,12 +535,6 @@ export function GridHome({
 
   const onSearchBarPress = useCallback(() => {
     setFocusArea("searchInput");
-    const vk = (
-      navigator as Navigator & {
-        virtualKeyboard?: { show?: () => void };
-      }
-    ).virtualKeyboard;
-    vk?.show?.();
   }, []);
 
   const onSearchIconTouch = useCallback(() => {

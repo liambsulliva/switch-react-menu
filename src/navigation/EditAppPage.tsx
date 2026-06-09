@@ -11,7 +11,10 @@ import { Button as ActionButton } from "../components/Button";
 import { Input, handleVirtualKeyboardFaceButton, INPUT_VIRTUAL_KEYBOARD_FOOTER_HINT } from "../components/Input";
 import { COLORS } from "../lib/colors";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
-import { useSwitchVirtualKeyboard } from "../hooks/useSwitchVirtualKeyboard";
+import {
+  getNxVirtualKeyboard,
+  useSwitchVirtualKeyboard,
+} from "../hooks/useSwitchVirtualKeyboard";
 import type { RichGameDetails, RichTrailer } from "../lib/richGameDetails";
 import {
   getInstalledRichMatch,
@@ -19,20 +22,6 @@ import {
   persistRichDetailsAfterBootstrap,
   setInstalledRichMatch,
 } from "../lib/richDetailsStore";
-
-type NxVirtualKeyboard = EventTarget & {
-  value: string;
-  show(): void;
-  hide(): void;
-};
-
-function getNxVirtualKeyboard(): NxVirtualKeyboard | null {
-  const nav = navigator as Navigator & { virtualKeyboard?: NxVirtualKeyboard };
-  const vk = nav.virtualKeyboard;
-  if (!vk || typeof vk.show !== "function") return null;
-  if (typeof vk.value !== "string") return null;
-  return vk;
-}
 
 export type RichEditorForm = {
   name: string;
@@ -224,7 +213,13 @@ export function EditApp({
   editingFieldRef.current = editingField;
 
   const { text: vkText, deleteLastChar: deleteLastVkChar } =
-    useSwitchVirtualKeyboard(editingField !== null);
+    useSwitchVirtualKeyboard(editingField !== null, {
+      initialValue: () => {
+        const key = editingFieldRef.current;
+        const current = formRef.current;
+        return key && current ? readFormField(current, key) : "";
+      },
+    });
 
   useEffect(() => {
     let cancelled = false;

@@ -277,7 +277,7 @@ export function App() {
     return (
       <CompactHome
         bootstrapError={bootstrapError}
-        onEditRawgApiKey={handleOpenRawgKeySettings}
+        onEditRawgApiKey={handleOpenRawgApiKeySettings}
       />
     );
   }
@@ -285,7 +285,7 @@ export function App() {
   return (
     <GridHome
       bootstrapError={bootstrapError}
-      onEditRawgApiKey={handleOpenRawgKeySettings}
+      onEditRawgApiKey={handleOpenRawgApiKeySettings}
     />
   );
 }

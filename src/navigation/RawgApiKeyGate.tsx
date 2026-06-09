@@ -53,7 +53,9 @@ export function RawgApiKeyGate({
   valueRef.current = value;
 
   const { text: vkText, deleteLastChar: deleteLastVkChar } =
-    useSwitchVirtualKeyboard(editing);
+    useSwitchVirtualKeyboard(editing, {
+      initialValue: () => valueRef.current,
+    });
 
   useEffect(() => {
     if (!editing) return;

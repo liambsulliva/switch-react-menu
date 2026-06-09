@@ -18,7 +18,17 @@ export function getNxVirtualKeyboard(): NxVirtualKeyboard | null {
 
 export type UseSwitchVirtualKeyboardOptions = {
   onDeleteBackwardAtEmpty?: () => void;
+  initialValue?: string | (() => string);
+  clearOnHide?: boolean;
 };
+
+function resolveInitialValue(
+  initialValue: UseSwitchVirtualKeyboardOptions["initialValue"],
+): string {
+  return typeof initialValue === "function"
+    ? initialValue()
+    : (initialValue ?? "");
+}
 
 export function useSwitchVirtualKeyboard(
   active: boolean,
@@ -27,7 +37,11 @@ export function useSwitchVirtualKeyboard(
   const [text, setText] = useState("");
   const vkRef = useRef<NxVirtualKeyboard | null>(null);
   const onDeleteBackwardAtEmptyRef = useRef(options?.onDeleteBackwardAtEmpty);
+  const initialValueRef = useRef(options?.initialValue);
+  const clearOnHideRef = useRef(options?.clearOnHide ?? true);
   onDeleteBackwardAtEmptyRef.current = options?.onDeleteBackwardAtEmpty;
+  initialValueRef.current = options?.initialValue;
+  clearOnHideRef.current = options?.clearOnHide ?? true;
 
   const syncFromVk = useCallback(() => {
     const vk = vkRef.current;
@@ -68,7 +82,13 @@ export function useSwitchVirtualKeyboard(
       return undefined;
     }
 
-    setText(vk.value);
+    const initialText = resolveInitialValue(initialValueRef.current);
+    try {
+      vk.value = initialText;
+    } catch {
+      /* ignore */
+    }
+    setText(initialText);
     const onChange = () => syncFromVk();
     vk.addEventListener("change", onChange);
     vk.addEventListener("cursormove", onChange);
@@ -93,6 +113,16 @@ export function useSwitchVirtualKeyboard(
         vk.hide();
       } catch {
         /* ignore */
+      }
+      if (clearOnHideRef.current) {
+        try {
+          vk.value = "";
+        } catch {
+          /* ignore */
+        }
+      }
+      if (vkRef.current === vk) {
+        vkRef.current = null;
       }
     };
   }, [active, syncFromVk]);

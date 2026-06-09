@@ -101,7 +101,6 @@ export function SearchBar({
         lineWidth={strokeW}
         borderRadius={height / 2}
         onTouchStart={onBarPress}
-        onClick={onBarPress}
       />
       {badgeSlots.map((b, i) => (
         <Badge
