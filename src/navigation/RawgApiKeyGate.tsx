@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@nx.js/constants";
 import { Rect, Text } from "react-tela";
 import { Button as ActionButton } from "../components/Button";
@@ -22,7 +17,6 @@ import { RawgApiError, validateRawgApiKey } from "../lib/rawgApiClient";
 import {
   clearRawgApiKey,
   getRawgApiKey,
-  hasStoredRawgApiKeyOverride,
   setRawgApiKey,
 } from "../settings/rawgApiKeyStore";
 
@@ -45,9 +39,9 @@ export function RawgApiKeyGate({
 }: RawgApiKeyGateProps) {
   const [value, setValue] = useState(() => getRawgApiKey());
   const [editing, setEditing] = useState(mode === "required");
-  const [focusArea, setFocusArea] = useState<"field" | "continue" | "clear" | "back">(
-    "field",
-  );
+  const [focusArea, setFocusArea] = useState<
+    "field" | "continue" | "clear" | "back"
+  >("field");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const valueRef = useRef(value);
@@ -76,9 +70,7 @@ export function RawgApiKeyGate({
   const fieldY = PANEL_TOP + 56;
   const continueY = fieldY + INPUT_H + 28;
   const clearY = continueY + ACTION_H + 16;
-  const showClear =
-    mode === "settings" &&
-    (hasStoredRawgApiKeyOverride() || getRawgApiKey().length > 0);
+  const showClear = mode === "settings" && getRawgApiKey().length > 0;
 
   const commitField = useCallback(() => {
     const vk = getNxVirtualKeyboard();
@@ -89,7 +81,9 @@ export function RawgApiKeyGate({
 
   const submit = useCallback(async () => {
     if (busy) return;
-    const key = (editing ? getNxVirtualKeyboard()?.value ?? value : value).trim();
+    const key = (
+      editing ? (getNxVirtualKeyboard()?.value ?? value) : value
+    ).trim();
     if (!key) {
       setStatus("Enter your RAWG API key to continue.");
       return;
@@ -326,7 +320,9 @@ export function RawgApiKeyGate({
         y={continueY}
         width={panelW}
         height={ACTION_H}
-        label={busy ? "Validating…" : mode === "required" ? "Continue" : "Save Key"}
+        label={
+          busy ? "Validating…" : mode === "required" ? "Continue" : "Save Key"
+        }
         isHighlighted={focusArea === "continue"}
         onPress={() => void submit()}
       />

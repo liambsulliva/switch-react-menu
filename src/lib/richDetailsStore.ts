@@ -6,10 +6,7 @@ import {
 } from "./iconHeroGradientPalette";
 export { normalizeGameTitleForMatch } from "./gameTitleMatch";
 import type { RichGameDetails } from "./richGameDetails";
-import {
-  fetchRichDetailsForTitle,
-  RawgApiError,
-} from "./rawgApiClient";
+import { fetchRichDetailsForTitle, RawgApiError } from "./rawgApiClient";
 import { getRawgApiKey, hasRawgApiKey } from "../settings/rawgApiKeyStore";
 import {
   loadPersistedIconHeroRgbIfSignatureMatches,
@@ -22,7 +19,10 @@ import {
   type RichPersistentPayload,
 } from "./richDetailsPersistentCache";
 
-type InstalledAppForRichDetails = Pick<Switch.Application, "id" | "name" | "icon">;
+type InstalledAppForRichDetails = Pick<
+  Switch.Application,
+  "id" | "name" | "icon"
+>;
 
 export type InitializeRichDetailsOptions = {
   onProgress?: (ratio: number) => void;
@@ -227,7 +227,9 @@ export function initializeRichDetailsForInstalledApps(
     if (forceRefresh) {
       const payload = await loadRichPersistentPayload(signature);
       if (payload) {
-        for (const [id, manual] of Object.entries(payload.manualOverrides ?? {})) {
+        for (const [id, manual] of Object.entries(
+          payload.manualOverrides ?? {},
+        )) {
           if (!manual) continue;
           manualOverridesByAppId.add(id);
           if (!installedMatchesByAppId.has(id)) {
@@ -253,9 +255,7 @@ export function initializeRichDetailsForInstalledApps(
       const cached = installedMatchesByAppId.get(appId);
       const isManual = manualOverridesByAppId.has(appId);
       const needsFetch =
-        rawgEnabled &&
-        !isManual &&
-        (forceRefresh || cached === undefined);
+        rawgEnabled && !isManual && (forceRefresh || cached === undefined);
 
       if (needsFetch) {
         try {

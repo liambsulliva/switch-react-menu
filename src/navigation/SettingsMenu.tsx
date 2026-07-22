@@ -167,8 +167,9 @@ export function SettingsMenu({
   const settings = useSettings();
   const listElements = useMemo<ListElementModel[]>(
     () =>
-      SETTING_ROWS.filter((row) => !(usesRawgProxy() && row.id === "rawgApiKey"))
-        .map((row) => ({
+      SETTING_ROWS.filter(
+        (row) => !(usesRawgProxy() && row.id === "rawgApiKey"),
+      ).map((row) => ({
         id: row.id,
         label: row.label,
         variant: row.variant,

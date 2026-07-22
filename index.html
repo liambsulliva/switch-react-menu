@@ -6,14 +6,24 @@
     <title>Switch React Menu — Browser Preview</title>
     <script>
       (function () {
+        var embedded = false;
         try {
-          if (window.self !== window.top) {
-            document.documentElement.classList.add("embed");
-          }
+          embedded = window.self !== window.top;
         } catch {
-          // Cross-origin parent: treat as embedded.
-          document.documentElement.classList.add("embed");
+          embedded = true;
         }
+
+        var localPreview =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1";
+
+        if (!embedded && !localPreview) {
+          document.documentElement.hidden = true;
+          window.location.replace("/projects/switch-react-menu/");
+          return;
+        }
+
+        document.documentElement.classList.add(embedded ? "embed" : "preview");
       })();
     </script>
     <style>
@@ -98,10 +108,8 @@
     <canvas id="screen" width="1280" height="720" tabindex="0"></canvas>
 
     <div id="help">
-      <kbd>←</kbd>/<kbd>→</kbd> select &nbsp;
-      <kbd>Q</kbd>/<kbd>E</kbd> page (L/R) &nbsp;
-      <kbd>Enter</kbd>/<kbd>Z</kbd> A &nbsp;
-      <kbd>X</kbd> B
+      <kbd>←</kbd>/<kbd>→</kbd> select &nbsp; <kbd>Q</kbd>/<kbd>E</kbd> page
+      (L/R) &nbsp; <kbd>Enter</kbd>/<kbd>Z</kbd> A &nbsp; <kbd>X</kbd> B
     </div>
 
     <script type="module" src="/src/browser/main.tsx"></script>

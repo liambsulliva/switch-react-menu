@@ -7,22 +7,15 @@ function storage(): Storage | null {
   return typeof localStorage !== "undefined" ? localStorage : null;
 }
 
-export function getBuiltInRawgApiKey(): string {
-  const fromEnv = import.meta.env.VITE_RAWG_API_KEY;
-  return typeof fromEnv === "string" ? fromEnv.trim() : "";
-}
-
 function loadRawgApiKey(): string {
   const ls = storage();
-  if (ls) {
-    try {
-      const raw = ls.getItem(STORAGE_KEY);
-      if (typeof raw === "string" && raw.trim()) return raw.trim();
-    } catch {
-      /* quota / private mode */
-    }
+  if (!ls) return "";
+  try {
+    const raw = ls.getItem(STORAGE_KEY);
+    return typeof raw === "string" ? raw.trim() : "";
+  } catch {
+    return "";
   }
-  return getBuiltInRawgApiKey();
 }
 
 let apiKeyState = loadRawgApiKey();
@@ -43,19 +36,9 @@ export function hasRawgApiKey(): boolean {
   return getRawgApiKey().length > 0;
 }
 
-export function hasStoredRawgApiKeyOverride(): boolean {
-  const ls = storage();
-  if (!ls) return false;
-  try {
-    const raw = ls.getItem(STORAGE_KEY);
-    return typeof raw === "string" && raw.trim().length > 0;
-  } catch {
-    return false;
-  }
-}
-
 export function setRawgApiKey(key: string): void {
   const trimmed = key.trim();
+  apiKeyState = trimmed;
   const ls = storage();
   if (ls) {
     try {
@@ -65,7 +48,6 @@ export function setRawgApiKey(key: string): void {
       /* quota */
     }
   }
-  apiKeyState = trimmed || getBuiltInRawgApiKey();
   emit();
 }
 

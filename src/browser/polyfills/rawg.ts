@@ -1,5 +1,4 @@
 import { usesRawgProxy } from "../../lib/rawgConfig";
-import { getBuiltInRawgApiKey } from "../../settings/rawgApiKeyStore";
 import { MOCK_APPS } from "../mock-data/apps";
 import { normalizeGameTitleForMatch } from "../../lib/gameTitleMatch";
 
@@ -51,7 +50,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function handleRawgRequest(input: RequestInfo | URL, init?: RequestInit): Response | null {
+function handleRawgRequest(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Response | null {
   const url =
     typeof input === "string"
       ? new URL(input, "https://api.rawg.io")
@@ -105,7 +107,7 @@ function handleRawgRequest(input: RequestInfo | URL, init?: RequestInit): Respon
 }
 
 export function installRawgFetchPolyfill(): void {
-  if (usesRawgProxy() || getBuiltInRawgApiKey()) return;
+  if (usesRawgProxy()) return;
 
   const originalFetch = globalThis.fetch.bind(globalThis);
   globalThis.fetch = (async (

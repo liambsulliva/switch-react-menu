@@ -61,20 +61,20 @@ async function throttle(): Promise<void> {
   lastRequestAt = Date.now();
 }
 
-function buildProxyUrl(
-  path: string,
-  params?: Record<string, string>,
-): string {
+function buildProxyUrl(path: string, params?: Record<string, string>): string {
   const base = getRawgProxyBase();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${base}${normalizedPath}`, "http://localhost");
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      if (v) url.searchParams.set(k, v);
+    for (const [key, value] of Object.entries(params)) {
+      if (value) url.searchParams.set(key, value);
     }
   }
-  const qs = url.searchParams.toString();
-  return qs ? `${base}${normalizedPath}?${qs}` : `${base}${normalizedPath}`;
+
+  const query = url.searchParams.toString();
+  return query
+    ? `${base}${normalizedPath}?${query}`
+    : `${base}${normalizedPath}`;
 }
 
 function buildUrl(
@@ -85,6 +85,7 @@ function buildUrl(
   if (usesRawgProxy()) {
     return buildProxyUrl(path, params);
   }
+
   const url = new URL(`${RAWG_BASE}${path}`);
   url.searchParams.set("key", apiKey);
   if (params) {

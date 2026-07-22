@@ -33,7 +33,7 @@ jobs:
           fi
           echo "MAIN_SITE_PUSH_TOKEN is configured."
           echo "Deploy target: $MAIN_SITE_REPO (public/$SITE_SLUG)"
-          echo "RAWG requests are proxied via Astro; set RAWG_API_KEY on the Vercel project."
+          echo "RAWG requests use the Astro proxy; configure RAWG_API_KEY in Vercel."
 
       - name: Checkout switch-react-menu
         uses: actions/checkout@v4
