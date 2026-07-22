@@ -18,6 +18,7 @@ import {
   type AppSettings,
   type BooleanAppSettingKey,
 } from "../settings/settingsStore";
+import { usesRawgProxy } from "../lib/rawgTransport";
 import { List } from "../components/List";
 import { HEADER_LAYOUT, HeaderLayout } from "../layouts/HeaderLayout";
 import type { ListElementModel } from "../components/ListElement";
@@ -139,7 +140,7 @@ const SETTING_ROWS: SettingRowConfig[] = [
     id: "rawgApiKey",
     label: "RAWG API Key",
     variant: "action",
-    isDisabled: (s) => s.disableRichDetails,
+    isDisabled: (s) => s.disableRichDetails || usesRawgProxy(),
     onSelect: ({ onEditRawgApiKey }) => onEditRawgApiKey?.(),
   },
   {

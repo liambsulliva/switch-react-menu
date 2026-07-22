@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { usesRawgProxy } from "../lib/rawgTransport";
 
 const STORAGE_KEY = "switch-react-menu-rawg-api-key-v1";
 
@@ -8,13 +9,15 @@ function storage(): Storage | null {
 
 function loadRawgApiKey(): string {
   const ls = storage();
-  if (!ls) return "";
-  try {
-    const raw = ls.getItem(STORAGE_KEY);
-    return typeof raw === "string" ? raw.trim() : "";
-  } catch {
-    return "";
+  if (ls) {
+    try {
+      const raw = ls.getItem(STORAGE_KEY);
+      if (typeof raw === "string" && raw.trim()) return raw.trim();
+    } catch {
+      /* quota / private mode */
+    }
   }
+  return "";
 }
 
 let apiKeyState = loadRawgApiKey();
@@ -31,12 +34,22 @@ export function getRawgApiKey(): string {
 }
 
 export function hasRawgApiKey(): boolean {
-  return apiKeyState.length > 0;
+  return usesRawgProxy() || getRawgApiKey().length > 0;
+}
+
+export function hasStoredRawgApiKeyOverride(): boolean {
+  const ls = storage();
+  if (!ls) return false;
+  try {
+    const raw = ls.getItem(STORAGE_KEY);
+    return typeof raw === "string" && raw.trim().length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function setRawgApiKey(key: string): void {
   const trimmed = key.trim();
-  apiKeyState = trimmed;
   const ls = storage();
   if (ls) {
     try {
@@ -46,6 +59,7 @@ export function setRawgApiKey(key: string): void {
       /* quota */
     }
   }
+  apiKeyState = trimmed;
   emit();
 }
 

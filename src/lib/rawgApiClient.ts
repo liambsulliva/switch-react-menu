@@ -1,5 +1,6 @@
 import type { RichGameDetails, RichTrailer } from "./richGameDetails";
 import { normalizeGameTitleForMatch } from "./gameTitleMatch";
+import { getRawgProxyBase } from "./rawgTransport";
 
 const RAWG_BASE = "https://api.rawg.io/api";
 export const RAWG_SWITCH_PLATFORM_ID = 7;
@@ -60,9 +61,20 @@ async function throttle(): Promise<void> {
   lastRequestAt = Date.now();
 }
 
-function buildUrl(path: string, apiKey: string, params?: Record<string, string>): string {
-  const url = new URL(`${RAWG_BASE}${path}`);
-  url.searchParams.set("key", apiKey);
+function buildUrl(
+  path: string,
+  apiKey: string,
+  params?: Record<string, string>,
+): string {
+  const proxyBase = getRawgProxyBase();
+  const url = proxyBase
+    ? new URL(`${proxyBase}${path}`, globalThis.location?.origin ?? "http://localhost")
+    : new URL(`${RAWG_BASE}${path}`);
+
+  if (!proxyBase) {
+    url.searchParams.set("key", apiKey);
+  }
+
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (v) url.searchParams.set(k, v);

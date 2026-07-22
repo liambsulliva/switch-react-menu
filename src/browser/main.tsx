@@ -1,13 +1,30 @@
 // Browser preview entrypoint (main.tsx) works like a standard React DOM app
 
 import { getBrowserDocument, isBrowserCanvas } from "./dom";
+import { isEmbedOnlyBuild } from "../lib/rawgTransport";
 import { installNxJsPolyfills } from "./polyfills";
+
+function assertEmbedContext(doc: Document): void {
+  if (!isEmbedOnlyBuild()) return;
+  let embedded = false;
+  try {
+    embedded = window.self !== window.top;
+  } catch {
+    embedded = true;
+  }
+  if (embedded) return;
+
+  doc.body.innerHTML =
+    '<p style="margin:0;padding:24px;font:16px/1.5 system-ui,sans-serif;color:#ccc;background:#000;">This demo is embed-only. View it from the project page on liambsullivan.com.</p>';
+  throw new Error("switch-menu embed-only: blocked top-level navigation");
+}
 
 async function bootstrap(): Promise<void> {
   const doc = getBrowserDocument();
   if (!doc) {
     throw new Error("Expected a browser document (browser preview only)");
   }
+  assertEmbedContext(doc as unknown as Document);
   const canvas = doc.getElementById("screen");
   if (!isBrowserCanvas(canvas)) {
     throw new Error("Expected a <canvas id='screen'> element in index.html");

@@ -1,3 +1,4 @@
+import { usesRawgProxy } from "../../lib/rawgTransport";
 import { MOCK_APPS } from "../mock-data/apps";
 import { normalizeGameTitleForMatch } from "../../lib/gameTitleMatch";
 
@@ -103,6 +104,8 @@ function handleRawgRequest(input: RequestInfo | URL, init?: RequestInit): Respon
 }
 
 export function installRawgFetchPolyfill(): void {
+  if (usesRawgProxy()) return;
+
   const originalFetch = globalThis.fetch.bind(globalThis);
   globalThis.fetch = (async (
     input: RequestInfo | URL,

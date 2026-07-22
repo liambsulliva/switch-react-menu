@@ -22,6 +22,7 @@ import { RawgApiError, validateRawgApiKey } from "../lib/rawgApiClient";
 import {
   clearRawgApiKey,
   getRawgApiKey,
+  hasStoredRawgApiKeyOverride,
   setRawgApiKey,
 } from "../settings/rawgApiKeyStore";
 
@@ -75,7 +76,9 @@ export function RawgApiKeyGate({
   const fieldY = PANEL_TOP + 56;
   const continueY = fieldY + INPUT_H + 28;
   const clearY = continueY + ACTION_H + 16;
-  const showClear = mode === "settings" && getRawgApiKey().length > 0;
+  const showClear =
+    mode === "settings" &&
+    (hasStoredRawgApiKeyOverride() || getRawgApiKey().length > 0);
 
   const commitField = useCallback(() => {
     const vk = getNxVirtualKeyboard();
