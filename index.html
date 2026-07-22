@@ -6,13 +6,12 @@
     <title>Switch React Menu — Browser Preview</title>
     <script>
       (function () {
-        var embedded = false;
         try {
-          embedded = window.self !== window.top;
+          if (window.self !== window.top) {
+            document.documentElement.classList.add("embed");
+          }
         } catch {
-          embedded = true;
-        }
-        if (embedded) {
+          // Cross-origin parent: treat as embedded.
           document.documentElement.classList.add("embed");
         }
       })();

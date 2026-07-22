@@ -1,6 +1,6 @@
 import type { RichGameDetails, RichTrailer } from "./richGameDetails";
 import { normalizeGameTitleForMatch } from "./gameTitleMatch";
-import { getRawgProxyBase } from "./rawgTransport";
+import { getRawgProxyBase, usesRawgProxy } from "./rawgConfig";
 
 const RAWG_BASE = "https://api.rawg.io/api";
 export const RAWG_SWITCH_PLATFORM_ID = 7;
@@ -61,20 +61,32 @@ async function throttle(): Promise<void> {
   lastRequestAt = Date.now();
 }
 
+function buildProxyUrl(
+  path: string,
+  params?: Record<string, string>,
+): string {
+  const base = getRawgProxyBase();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = new URL(`${base}${normalizedPath}`, "http://localhost");
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      if (v) url.searchParams.set(k, v);
+    }
+  }
+  const qs = url.searchParams.toString();
+  return qs ? `${base}${normalizedPath}?${qs}` : `${base}${normalizedPath}`;
+}
+
 function buildUrl(
   path: string,
   apiKey: string,
   params?: Record<string, string>,
 ): string {
-  const proxyBase = getRawgProxyBase();
-  const url = proxyBase
-    ? new URL(`${proxyBase}${path}`, globalThis.location?.origin ?? "http://localhost")
-    : new URL(`${RAWG_BASE}${path}`);
-
-  if (!proxyBase) {
-    url.searchParams.set("key", apiKey);
+  if (usesRawgProxy()) {
+    return buildProxyUrl(path, params);
   }
-
+  const url = new URL(`${RAWG_BASE}${path}`);
+  url.searchParams.set("key", apiKey);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (v) url.searchParams.set(k, v);
@@ -100,6 +112,8 @@ async function rawgFetch<T>(
   }
   return (await res.json()) as T;
 }
+
+export { usesRawgProxy } from "./rawgConfig";
 
 export async function validateRawgApiKey(
   apiKey: string,
@@ -145,7 +159,12 @@ export async function getGameDetails(
   apiKey: string,
   signal?: AbortSignal,
 ): Promise<RawgGameDetails> {
-  return rawgFetch<RawgGameDetails>(`/games/${slugOrId}`, apiKey, undefined, signal);
+  return rawgFetch<RawgGameDetails>(
+    `/games/${slugOrId}`,
+    apiKey,
+    undefined,
+    signal,
+  );
 }
 
 export async function getGameMovies(
@@ -188,9 +207,7 @@ function extractYoutubeId(url: string): string | null {
 function hasSwitchPlatform(game: RawgSearchGame): boolean {
   const platforms = game.platforms;
   if (!Array.isArray(platforms)) return true;
-  return platforms.some(
-    (p) => p.platform?.id === RAWG_SWITCH_PLATFORM_ID,
-  );
+  return platforms.some((p) => p.platform?.id === RAWG_SWITCH_PLATFORM_ID);
 }
 
 export function scoreRawgSearchCandidate(

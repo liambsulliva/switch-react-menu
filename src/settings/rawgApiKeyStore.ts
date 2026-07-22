@@ -1,10 +1,15 @@
 import { useSyncExternalStore } from "react";
-import { usesRawgProxy } from "../lib/rawgTransport";
+import { usesRawgProxy } from "../lib/rawgConfig";
 
 const STORAGE_KEY = "switch-react-menu-rawg-api-key-v1";
 
 function storage(): Storage | null {
   return typeof localStorage !== "undefined" ? localStorage : null;
+}
+
+export function getBuiltInRawgApiKey(): string {
+  const fromEnv = import.meta.env.VITE_RAWG_API_KEY;
+  return typeof fromEnv === "string" ? fromEnv.trim() : "";
 }
 
 function loadRawgApiKey(): string {
@@ -17,7 +22,7 @@ function loadRawgApiKey(): string {
       /* quota / private mode */
     }
   }
-  return "";
+  return getBuiltInRawgApiKey();
 }
 
 let apiKeyState = loadRawgApiKey();
@@ -34,7 +39,8 @@ export function getRawgApiKey(): string {
 }
 
 export function hasRawgApiKey(): boolean {
-  return usesRawgProxy() || getRawgApiKey().length > 0;
+  if (usesRawgProxy()) return true;
+  return getRawgApiKey().length > 0;
 }
 
 export function hasStoredRawgApiKeyOverride(): boolean {
@@ -59,7 +65,7 @@ export function setRawgApiKey(key: string): void {
       /* quota */
     }
   }
-  apiKeyState = trimmed;
+  apiKeyState = trimmed || getBuiltInRawgApiKey();
   emit();
 }
 

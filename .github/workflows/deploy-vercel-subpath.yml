@@ -33,7 +33,7 @@ jobs:
           fi
           echo "MAIN_SITE_PUSH_TOKEN is configured."
           echo "Deploy target: $MAIN_SITE_REPO (public/$SITE_SLUG)"
-          echo "Ensure RAWG_API_KEY is set in the Vercel project for personal-website-v2."
+          echo "RAWG requests are proxied via Astro; set RAWG_API_KEY on the Vercel project."
 
       - name: Checkout switch-react-menu
         uses: actions/checkout@v4
@@ -52,7 +52,6 @@ jobs:
         env:
           SITE_BASE_PATH: /${{ env.SITE_SLUG }}/
           VITE_RAWG_PROXY_BASE: /api/rawg
-          VITE_EMBED_ONLY: "true"
 
       - name: Checkout main site
         uses: actions/checkout@v4
@@ -61,15 +60,12 @@ jobs:
           token: ${{ secrets.MAIN_SITE_PUSH_TOKEN }}
           path: main-site
 
-      - name: Sync embed bundle and Astro proxy into main site
+      - name: Sync embed bundle into main site
         run: |
           TARGET="main-site/${MAIN_SITE_PUBLIC_DIR}/${SITE_SLUG}"
           rm -rf "$TARGET"
-          mkdir -p "$TARGET/assets" "$TARGET/fonts" "main-site/private/switch-menu"
-          cp -r dist/browser/assets/* "$TARGET/assets/"
-          cp -r dist/browser/fonts/* "$TARGET/fonts/"
-          cp dist/browser/index.html "main-site/private/switch-menu/index.html"
-          rsync -a deploy/personal-website-v2/src/ main-site/src/
+          mkdir -p "$TARGET"
+          cp -r dist/browser/* "$TARGET/"
 
       - name: Commit and push to main site
         working-directory: main-site
@@ -79,14 +75,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            "${MAIN_SITE_PUBLIC_DIR}/${SITE_SLUG}" \
-            private/switch-menu \
-            src/lib/switchMenuEmbed.ts \
-            src/pages/switch-menu \
-            src/pages/api/rawg \
-            src/middleware.ts \
-            src/env.d.ts
+          git add "${MAIN_SITE_PUBLIC_DIR}/${SITE_SLUG}"
           if git diff --staged --quiet; then
             echo "No changes to deploy."
             exit 0

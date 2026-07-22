@@ -10,7 +10,7 @@ import {
   fetchRichDetailsForTitle,
   RawgApiError,
 } from "./rawgApiClient";
-import { getRawgApiKey } from "../settings/rawgApiKeyStore";
+import { getRawgApiKey, hasRawgApiKey } from "../settings/rawgApiKeyStore";
 import {
   loadPersistedIconHeroRgbIfSignatureMatches,
   loadPersistedManualOverrides,
@@ -213,6 +213,7 @@ export function initializeRichDetailsForInstalledApps(
   const report = (r: number) => onProgress?.(Math.max(0, Math.min(1, r)));
   const forceRefresh = options?.forceRefresh ?? false;
   const apiKey = getRawgApiKey();
+  const rawgEnabled = hasRawgApiKey();
 
   installedMatchSignature = signature;
   installedMatchPromise = (async () => {
@@ -252,7 +253,7 @@ export function initializeRichDetailsForInstalledApps(
       const cached = installedMatchesByAppId.get(appId);
       const isManual = manualOverridesByAppId.has(appId);
       const needsFetch =
-        !!apiKey &&
+        rawgEnabled &&
         !isManual &&
         (forceRefresh || cached === undefined);
 
