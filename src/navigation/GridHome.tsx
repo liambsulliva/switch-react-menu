@@ -91,6 +91,7 @@ const SEARCH_BAR_FONT_SEARCH_INPUT_PX = 18;
 const SEARCH_BAR_DISPLAY_MAX_CHARS_DEFAULT = 42;
 const SEARCH_BAR_DISPLAY_MAX_CHARS_SEARCH_INPUT = 52;
 const DOWN_NAV_HINT_ARROW_PX = 36;
+const DOWN_NAV_HINT_HIT_PX = 56;
 const switchSearchKeyboardReservePx = () =>
   Math.min(
     Math.max(Math.floor(screen.height * 0.4), 280),
@@ -544,6 +545,11 @@ export function GridHome({
     setFocusArea("searchInput");
   }, [focusArea, onSearchCancel]);
 
+  const onDownNavHintTouch = useCallback(() => {
+    if (!selectedApp) return;
+    openHeroSplashInline();
+  }, [selectedApp, openHeroSplashInline]);
+
   const onButtonBPress = useCallback(() => {
     if (focusArea === "searchInput") {
       handleVirtualKeyboardFaceButton("B", {
@@ -742,6 +748,10 @@ export function GridHome({
   const navBottomArrowY = screen.height - 60;
   const downNavHintImgLeft = screen.width / 2 - DOWN_NAV_HINT_ARROW_PX / 2;
   const downNavHintImgTop = navBottomArrowY;
+  const downNavHintHitLeft =
+    screen.width / 2 - DOWN_NAV_HINT_HIT_PX / 2;
+  const downNavHintHitTop =
+    navBottomArrowY + DOWN_NAV_HINT_ARROW_PX / 2 - DOWN_NAV_HINT_HIT_PX / 2;
 
   return (
     <>
@@ -967,13 +977,23 @@ export function GridHome({
       })}
 
       {showDownNavHint && downNavHintIconSrc && (
-        <Image
-          src={downNavHintIconSrc}
-          x={downNavHintImgLeft}
-          y={downNavHintImgTop}
-          width={DOWN_NAV_HINT_ARROW_PX}
-          height={DOWN_NAV_HINT_ARROW_PX}
-        />
+        <>
+          <Image
+            src={downNavHintIconSrc}
+            x={downNavHintImgLeft}
+            y={downNavHintImgTop}
+            width={DOWN_NAV_HINT_ARROW_PX}
+            height={DOWN_NAV_HINT_ARROW_PX}
+          />
+          <Rect
+            x={downNavHintHitLeft}
+            y={downNavHintHitTop}
+            width={DOWN_NAV_HINT_HIT_PX}
+            height={DOWN_NAV_HINT_HIT_PX}
+            fill="transparent"
+            onTouchStart={onDownNavHintTouch}
+          />
+        </>
       )}
 
       {!heroSplashOnGridEnabled && (
