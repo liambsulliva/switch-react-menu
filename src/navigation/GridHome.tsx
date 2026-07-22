@@ -244,8 +244,7 @@ export function GridHome({
   const appCount = appsForGrid.length;
 
   const richDetailsExperienceEnabled = !settings.disableRichDetails;
-  const heroSplashOnGridEnabled =
-    richDetailsExperienceEnabled && settings.heroSplashInlineGrid;
+  const heroSplashOnGridEnabled = richDetailsExperienceEnabled;
 
   const selectedApp =
     appCount > 0 ? (appsForGrid[selectedIndex] ?? null) : null;

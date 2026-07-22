@@ -115,7 +115,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showLastPlayed: false,
   enableSounds: false,
   screensaver: true,
-  heroSplashInlineGrid: false,
+  heroSplashInlineGrid: true,
 };
 
 function storage(): Storage | null {
@@ -137,7 +137,9 @@ function loadSettings(): AppSettings {
           showPageNumbers?: boolean;
         }
       >;
-      const heroSplashInlineGrid = parsed.heroSplashInlineGrid ?? false;
+      const heroSplashInlineGrid =
+        parsed.heroSplashInlineGrid ??
+        !Boolean(parsed.disableRichDetails ?? DEFAULT_SETTINGS.disableRichDetails);
       const {
         alphabeticalSort: legacyAlphabetical,
         customSort: _legacyCustomSort,
