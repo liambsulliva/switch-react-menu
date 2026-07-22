@@ -24,6 +24,7 @@
     "@nx.js/nsp": "^0.0.70",
     "@nx.js/runtime": "^0.0.70",
     "@nx.js/constants": "^0.4.0",
+    "@types/node": "^22.12.0",
     "@types/react": "^18.2.56",
     "@vitejs/plugin-react": "^6.0.1",
     "esbuild": "^0.27.3",
