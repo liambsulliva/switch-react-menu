@@ -15,19 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_SLUG: ${{ vars.SITE_BASE_PATH || 'switch-menu' }}
-      MAIN_SITE_REPO: ${{ vars.MAIN_SITE_REPO }}
+      MAIN_SITE_REPO: ${{ vars.MAIN_SITE_REPO || 'liambsulliva/personal-website-v2' }}
       MAIN_SITE_PUBLIC_DIR: ${{ vars.MAIN_SITE_PUBLIC_DIR || 'public' }}
     steps:
       - name: Validate configuration
+        env:
+          MAIN_SITE_PUSH_TOKEN: ${{ secrets.MAIN_SITE_PUSH_TOKEN }}
         run: |
           if [ -z "$MAIN_SITE_REPO" ]; then
-            echo "Set repository variable MAIN_SITE_REPO (e.g. liambsulliva/your-site)."
+            echo "Set repository variable MAIN_SITE_REPO (e.g. liambsulliva/personal-website-v2)."
             exit 1
           fi
-          if [ -z "${{ secrets.MAIN_SITE_PUSH_TOKEN }}" ]; then
+          if [ -z "$MAIN_SITE_PUSH_TOKEN" ]; then
             echo "Set secret MAIN_SITE_PUSH_TOKEN with write access to the main site repo."
             exit 1
           fi
+          echo "Deploy target: $MAIN_SITE_REPO (public/$SITE_SLUG)"
 
       - name: Checkout switch-react-menu
         uses: actions/checkout@v4
