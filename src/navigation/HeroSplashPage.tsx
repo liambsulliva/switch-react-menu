@@ -23,6 +23,7 @@ import {
   getCachedIconHeroRgbPair,
   renderHeroGradientObjectUrl,
 } from "../lib/iconHeroGradientPalette";
+import { getUpArrowPng } from "../lib/iconPng";
 import { getBrowserDocument } from "../browser/dom";
 
 const heroSplashIconUrlCache = new Map<string, string>();
@@ -87,6 +88,7 @@ export type HeroSplashProps = {
   heroActionIndex?: number;
   onPlayGame: () => void;
   onEditInfo: () => void;
+  onCloseDetails: () => void;
 };
 
 const IMAGE_EXTRA = 1.55;
@@ -96,6 +98,10 @@ const HERO_TAG_PILL_FILL = COLORS.gray[900];
 const HERO_TAG_TEXT_FILL = COLORS.gray[0];
 
 const HERO_BTN_IDLE = COLORS.gray[900];
+
+const HERO_CLOSE_DETAILS_ARROW_PX = 36;
+const HERO_CLOSE_DETAILS_HIT_PX = 56;
+const HERO_CLOSE_DETAILS_RIGHT_MARGIN_PX = 18;
 
 function cardAccentRgb(i: number): { r: number; g: number; b: number } {
   const hues = [
@@ -120,6 +126,7 @@ export function HeroSplash({
   heroActionIndex = 0,
   onPlayGame,
   onEditInfo,
+  onCloseDetails,
 }: HeroSplashProps) {
   const pan = Math.max(0, Math.min(1, panT));
   const HERO_H =
@@ -147,6 +154,19 @@ export function HeroSplash({
 
   const [heroGradientUrl, setHeroGradientUrl] = useState<string | null>(null);
   const heroGradientUrlRef = useRef<string | null>(null);
+  const [closeDetailsArrowSrc, setCloseDetailsArrowSrc] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let active = true;
+    void getUpArrowPng(COLORS.gray[0]).then((src) => {
+      if (active) setCloseDetailsArrowSrc(src);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!useIconBackdropGradient || !iconBackdropPair) {
@@ -342,6 +362,23 @@ export function HeroSplash({
   const actionInfoHighlighted =
     heroInlineSubFocus === "actions" && heroActionIndex === 1;
 
+  const closeDetailsArrowX =
+    screen.width -
+    HERO_CLOSE_DETAILS_RIGHT_MARGIN_PX -
+    HERO_CLOSE_DETAILS_ARROW_PX;
+  const closeDetailsArrowY =
+    yTitleRow +
+    (yTagsBase - yTitleRow) / 2 -
+    HERO_CLOSE_DETAILS_ARROW_PX / 2;
+  const closeDetailsHitX =
+    closeDetailsArrowX +
+    HERO_CLOSE_DETAILS_ARROW_PX / 2 -
+    HERO_CLOSE_DETAILS_HIT_PX / 2;
+  const closeDetailsHitY =
+    closeDetailsArrowY +
+    HERO_CLOSE_DETAILS_ARROW_PX / 2 -
+    HERO_CLOSE_DETAILS_HIT_PX / 2;
+
   return (
     <>
       {heroGradientUrl ? (
@@ -402,6 +439,26 @@ export function HeroSplash({
           style={{ fill: HERO_TAG_PILL_FILL, textFill: HERO_TAG_TEXT_FILL }}
         />
       ))}
+
+      {closeDetailsArrowSrc && (
+        <>
+          <Image
+            src={closeDetailsArrowSrc}
+            x={closeDetailsArrowX}
+            y={closeDetailsArrowY}
+            width={HERO_CLOSE_DETAILS_ARROW_PX}
+            height={HERO_CLOSE_DETAILS_ARROW_PX}
+          />
+          <Rect
+            x={closeDetailsHitX}
+            y={closeDetailsHitY}
+            width={HERO_CLOSE_DETAILS_HIT_PX}
+            height={HERO_CLOSE_DETAILS_HIT_PX}
+            fill="transparent"
+            onTouchStart={onCloseDetails}
+          />
+        </>
+      )}
 
       {(state.status === "loading" || state.status === "idle") && (
         <Text

@@ -785,6 +785,7 @@ export function GridHome({
           heroActionIndex={heroActionIndex}
           onPlayGame={onHeroPlayGame}
           onEditInfo={onHeroEditInfo}
+          onCloseDetails={closeHeroSplashInline}
         />
       )}
 

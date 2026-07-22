@@ -4,6 +4,7 @@ interface RasterIconSpec {
   viewBoxSize: number;
   fill: string;
   paths: string[];
+  flipY?: boolean;
 }
 
 const iconUrlCache = new Map<string, Promise<string>>();
@@ -14,6 +15,7 @@ async function rasterizeIcon({
   viewBoxSize,
   fill,
   paths,
+  flipY = false,
 }: RasterIconSpec) {
   const cached = iconUrlCache.get(key);
   if (cached) return cached;
@@ -28,7 +30,11 @@ async function rasterizeIcon({
     ctx.clearRect(0, 0, size, size);
     ctx.fillStyle = fill;
     const scale = size / viewBoxSize;
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    if (flipY) {
+      ctx.setTransform(scale, 0, 0, -scale, 0, size);
+    } else {
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    }
     for (const d of paths) {
       ctx.fill(new Path2D(d));
     }
@@ -100,6 +106,16 @@ export const getDownArrowPng = (fill: string) =>
     viewBoxSize: 16,
     fill,
     paths: DOWN_ARROW_PATHS,
+  });
+
+export const getUpArrowPng = (fill: string) =>
+  rasterizeIcon({
+    key: `up-${fill}-96`,
+    size: 96,
+    viewBoxSize: 16,
+    fill,
+    paths: DOWN_ARROW_PATHS,
+    flipY: true,
   });
 
 export const getSettingsCogPng = (fill: string) =>
