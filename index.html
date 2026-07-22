@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Switch React Menu — Browser Preview</title>
-    <link rel="icon" type="image/jpeg" href="/icon.jpg" />
+    <script>
+      (function () {
+        try {
+          if (window.self !== window.top) {
+            document.documentElement.classList.add("embed");
+          }
+        } catch {
+          // Cross-origin parent: treat as embedded.
+          document.documentElement.classList.add("embed");
+        }
+      })();
+    </script>
     <style>
       *,
       *::before,
@@ -60,6 +71,25 @@
         border: 1px solid #333;
         border-radius: 4px;
         font: inherit;
+      }
+
+      /* Embed layout: only when the page detects it is running inside an iframe. */
+      html.embed body {
+        display: block;
+        margin: 0;
+        padding: 0;
+      }
+
+      html.embed #screen {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        aspect-ratio: unset;
+      }
+
+      html.embed #help {
+        display: none;
       }
     </style>
   </head>

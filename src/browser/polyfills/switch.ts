@@ -89,9 +89,11 @@ class BrowserMockApplication implements MockApplication {
   }
 }
 
+const ASSET_BASE = import.meta.env.BASE_URL;
+
 const PATH_PREFIX_MAP: ReadonlyArray<readonly [string, string]> = [
-  ["romfs:/", "/"],
-  ["sdmc:/", "/sdmc/"],
+  ["romfs:/", ASSET_BASE],
+  ["sdmc:/", `${ASSET_BASE}sdmc/`],
 ];
 
 const EMPTY_ALBUM_BYTES = new ArrayBuffer(0);
